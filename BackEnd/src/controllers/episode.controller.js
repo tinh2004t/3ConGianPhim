@@ -3,12 +3,13 @@ const Episode = require('../models/episode.model');
 // GET - Danh sách tập phim theo movieId
 exports.getEpisodesByMovie = async (req, res) => {
   try {
-    const episodes = await Episode.find({ movie: req.params.movie });
-    res.status(200).json(episodes);
+    const episodes = await Episode.find({ movie: req.params.movieId }).sort({ episodeNumber: 1 });
+    res.status(200).json(episodes); // ✅ Trả về mảng các tập
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // GET - 1 tập phim cụ thể
 exports.getEpisodeById = async (req, res) => {
