@@ -11,6 +11,7 @@ const movieSchema = new mongoose.Schema({
   country: String,
   totalEpisodes: Number,
   viewCount: { type: Number, default: 0 },
+  type: { type: String, enum: ['Movies', 'TvSeries'], required: true },
 }, {
   timestamps: true,
 });

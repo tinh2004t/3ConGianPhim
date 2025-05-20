@@ -9,6 +9,23 @@ exports.getEpisodesByMovie = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// Giả sử model Episode có trường movieId liên kết với phim đó
+exports.getEpisodeByMovieAndEpisodeId = async (req, res) => {
+  const { movieId, episodeId } = req.params;
+
+  try {
+    // Tìm tập phim theo id và kiểm tra thuộc phim nào
+    const episode = await Episode.findOne({ _id: episodeId, movieId: movieId });
+
+    if (!episode) {
+      return res.status(404).json({ message: 'Không tìm thấy tập phim thuộc phim này' });
+    }
+
+    res.status(200).json(episode);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 
 // GET - 1 tập phim cụ thể

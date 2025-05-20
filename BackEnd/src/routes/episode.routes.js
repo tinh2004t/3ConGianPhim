@@ -7,8 +7,12 @@ const { authenticate, requireAdmin } = require('../middlewares/auth.middleware')
 // Lấy danh sách tập theo movieId
 router.get('/movies/:movieId/episodes', episodeController.getEpisodesByMovie);
 
+
+
 // Lấy 1 tập cụ thể
 router.get('/episodes/:id', episodeController.getEpisodeById);
+router.get('/movies/:movieId/episodes/:episodeId', episodeController.getEpisodeByMovieAndEpisodeId);
+
 
 // Thêm tập phim (chỉ admin)
 router.post('/movies/:movieId/episodes', authenticate, requireAdmin, episodeController.createEpisode);

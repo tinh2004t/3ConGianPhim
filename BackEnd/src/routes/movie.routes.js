@@ -7,6 +7,10 @@ const { authenticate, requireAdmin } = require('../middlewares/auth.middleware')
 // Lấy danh sách
 router.get('/', movieController.getAllMovies);
 router.get('/top', movieController.getTopMovies);
+router.get('/type/:type', movieController.getMoviesByType);
+router.get('/top-view/:type', movieController.getTopViewByType);
+router.get('/random', movieController.getRandomMovies);
+
 
 // Lọc phim theo genre, năm, trạng thái
 router.get('/search', movieController.searchMovies);
