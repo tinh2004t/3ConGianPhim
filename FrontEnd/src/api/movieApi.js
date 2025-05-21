@@ -3,6 +3,7 @@ import axiosClient from './axiosClient';
 const movieApi = {
   getAll: (params) => axiosClient.get('/movies', { params }),  // hỗ trợ lọc genre, year,...
   getTopViewByType: (type, limit = 12) => axiosClient.get(`/movies/top-view/${type}?limit=${limit}`),
+  searchByName: (query) => axiosClient.get(`/movies?q=${encodeURIComponent(query)}`),
   getRandom: () => axiosClient.get('/movies/random'),
   getByType: (type) => axiosClient.get(`/movies/type/${type}`),
   getTop: () => axiosClient.get('/movies/top'),

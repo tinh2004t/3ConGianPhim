@@ -1,13 +1,27 @@
 // src/api/userApi.js
-import axios from 'axios';
+import axiosClient from './axiosClient';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'; // điều chỉnh nếu backend chạy port khác
+const userApi = {
+  getMe: (token) =>
+    axiosClient.get('/users/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 
-export const getMe = async (token) => {
-  const res = await axios.get(`${API_BASE}/users/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return res.data;
+  addFavorite: (movieId, token) =>
+    axiosClient.post(
+      '/users/me/favorites',
+      { movieId },
+      { headers: { Authorization: `Bearer ${token}` } }
+    ),
+  getFavorites: (token) =>
+    axiosClient.get('/users/me/favorites', { headers: { Authorization: `Bearer ${token}` } }),
+
+  deleteFavorite: (movieId, token) =>
+  axiosClient.delete('/users/me/favorites/' + movieId, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
+
+  // Nếu sau này bạn có thêm API user khác thì bổ sung vào đây
 };
+
+export default userApi;

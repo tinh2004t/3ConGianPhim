@@ -20,16 +20,13 @@ exports.getAllMovies = async (req, res) => {
 
     const query = {};
 
-    // Lọc theo type nếu có
     if (type && ['Movies', 'TvSeries'].includes(type)) {
       query.type = type;
     }
 
-    // Lọc theo genre (nếu genres là mảng ObjectId)
-    if (req.query.genre) {
-  query.genres = req.query.genre; // nếu genres là mảng các ID string
-}
-
+    if (genre) {
+      query.genres = mongoose.Types.ObjectId(genre);
+    }
 
     if (year) {
       query.releaseYear = Number(year);
@@ -38,33 +35,34 @@ exports.getAllMovies = async (req, res) => {
     if (status) query.status = status;
     if (country) query.country = country;
 
-    // Tìm kiếm theo tiêu đề
+    // Sử dụng $text thay vì regex để tìm kiếm chính xác hơn
     if (q) {
-      query.title = { $regex: q, $options: 'i' };
+      query.$text = { $search: q };
     }
 
-    
-
     const totalItems = await Movie.countDocuments(query);
-const movies = await Movie.find(query)
-  .populate('genres')
-  .sort({ [sort]: -1 })
-  .skip((Number(page) - 1) * Number(limit))
-  .limit(Number(limit));
 
-res.json({
-  success: true,
-  data: movies,
-  totalItems,
-  currentPage: Number(page),
-  totalPages: Math.ceil(totalItems / Number(limit)),
-});
+    const movies = await Movie.find(query)
+      .populate('genres')
+      .sort(q ? { score: { $meta: 'textScore' } } : { [sort]: -1 })
+      .select(q ? { score: { $meta: 'textScore' } } : {})
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit));
+
+    res.json({
+      success: true,
+      data: movies,
+      totalItems,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalItems / Number(limit)),
+    });
 
   } catch (err) {
     console.error('Lỗi khi lấy danh sách phim:', err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 

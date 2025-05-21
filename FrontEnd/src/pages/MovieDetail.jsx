@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import movieApi from '../api/movieApi';
-
+import { useNavigate } from 'react-router-dom';
 import episodeApi from '../api/episodeApi';
+import userApi from '../api/userApi';
 
 const MovieDetail = () => {
   const { id } = useParams(); // Lấy ID phim từ URL
@@ -10,8 +11,13 @@ const MovieDetail = () => {
   const [episodes, setEpisodes] = useState([]);
   const [activeTab, setActiveTab] = useState('episodes');
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
+
+
+
     const fetchMovieData = async () => {
       try {
         setLoading(true);
@@ -38,7 +44,27 @@ const MovieDetail = () => {
   }, [id]);
 
 
+  const handleAddToFavorites = async () => {
+  const token = localStorage.getItem('token');
 
+  if (!token) {
+    alert('Vui lòng đăng nhập để thêm vào yêu thích!');
+    return navigate('/login');
+  }
+
+  if (!movieData?._id) {
+    alert('Lỗi: Không xác định được phim!');
+    return;
+  }
+
+  try {
+    await userApi.addFavorite(movieData._id, token);
+    alert('Đã thêm vào danh sách yêu thích!');
+  } catch (error) {
+    console.error('Lỗi khi thêm vào yêu thích:', error.response?.data || error.message);
+    alert(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
+  }
+};
 
   const tabs = [
     { id: 'episodes', label: 'Danh sách tập' },
@@ -118,17 +144,28 @@ const MovieDetail = () => {
 
       {/* Tabs */}
       <div className="bg-gray-900 rounded-md mb-4">
-        <div className="flex border-b border-gray-700">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={`px-4 py-3 ${activeTab === tab.id ? 'text-red-500 border-b-2 border-red-500' : 'text-gray-400 hover:text-white'}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex justify-between items-center border-b border-gray-700 px-4">
+          <div className="flex">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`px-4 py-3 ${activeTab === tab.id ? 'text-red-500 border-b-2 border-red-500' : 'text-gray-400 hover:text-white'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleAddToFavorites}
+            className="text-red-500 hover:text-red-400 text-xl"
+            title="Thêm vào yêu thích"
+          >
+            ❤️
+          </button>
         </div>
+
 
         <div className="p-4">
           {activeTab === 'episodes' && (

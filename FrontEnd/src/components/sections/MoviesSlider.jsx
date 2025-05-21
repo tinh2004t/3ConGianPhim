@@ -108,7 +108,7 @@ const MoviesSlider = ({ title, seeAllLink, movies }) => {
             {movies.map((movie) => (
               <div key={movie.id} className="flex-shrink-0 w-48" role="listitem">
                 <MovieCard
-                  id={movie.id}
+                  id={movie._id}
                   title={movie.title}
                   posterUrl={convertDriveLink(movie.posterUrl)}
                   releaseYear={movie.releaseYear}

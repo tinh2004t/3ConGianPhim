@@ -50,6 +50,25 @@ exports.addHistory = async (req, res) => {
   }
 };
 
+exports.removeFavorite = async (req, res) => {
+  try {
+    const { movieId } = req.params;  // Lấy movieId từ params, không phải body
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+    user.favorites = user.favorites.filter(
+      (favId) => favId.toString() !== movieId
+    );
+    await user.save();
+    res.json({ message: 'Đã xóa khỏi yêu thích' });
+  } catch (err) {
+    console.error('Lỗi removeFavorite:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+
 // Lấy lịch sử xem
 exports.getHistory = async (req, res) => {
   try {

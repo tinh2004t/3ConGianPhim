@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
 import movieApi from "../../api/movieApi";
+import { useNavigate } from "react-router-dom";
+
+
+
+
 
 // Chuyển link YouTube thành link nhúng (embed)
 const convertToEmbedURL = (url) => {
@@ -21,6 +26,7 @@ const convertToEmbedURL = (url) => {
 const MasterBanner = () => {
   const [slides, setSlides] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTopMovies = async () => {
@@ -111,13 +117,20 @@ const MasterBanner = () => {
           </p>
 
           <div className="flex space-x-4 mt-4">
-            <button className="bg-white text-black px-4 py-2 rounded font-semibold hover:bg-gray-200 transition">
+            <button
+              onClick={() => navigate(`/movies/${current._id || current.id}`)}
+              className="bg-white text-black px-4 py-2 rounded font-semibold hover:bg-gray-200 transition"
+            >
               ▶ Xem ngay
             </button>
-            <button className="bg-gray-800 bg-opacity-70 text-white px-4 py-2 rounded font-semibold hover:bg-opacity-100 transition">
+            <button
+              onClick={() => navigate(`/movies/${current._id || current.id}`)}
+              className="bg-gray-800 bg-opacity-70 text-white px-4 py-2 rounded font-semibold hover:bg-opacity-100 transition"
+            >
               Chi tiết
             </button>
           </div>
+
         </div>
       </div>
 
@@ -142,9 +155,8 @@ const MasterBanner = () => {
         {slides.map((_, idx) => (
           <div
             key={idx}
-            className={`w-3 h-3 rounded-full ${
-              idx === currentIndex ? "bg-white" : "bg-gray-400"
-            }`}
+            className={`w-3 h-3 rounded-full ${idx === currentIndex ? "bg-white" : "bg-gray-400"
+              }`}
           />
         ))}
       </div>
