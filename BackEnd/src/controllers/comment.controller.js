@@ -3,21 +3,27 @@ const Comment = require('../models/comment.model');
 exports.createComment = async (req, res) => {
   try {
     const { movieId, episodeId, content } = req.body;
+
     const comment = await Comment.create({
       movieId,
       episodeId,
       userId: req.user.userId,
       content
     });
-    res.status(201).json(comment);
+
+    const populatedComment = await Comment.findById(comment._id)
+      .populate('userId', 'username');
+
+    res.status(201).json(populatedComment);
   } catch (err) {
+    console.error('Error creating comment:', err);
     res.status(500).json({ message: 'Error creating comment' });
   }
 };
 
 exports.getComments = async (req, res) => {
   try {
-    const { movieId, episodeId } = req.query;
+    const { movieId, episodeId, page = 1, limit = 10 } = req.query;
 
     if (!movieId) {
       return res.status(400).json({ message: 'movieId is required' });
@@ -26,16 +32,30 @@ exports.getComments = async (req, res) => {
     const filter = { movieId };
     if (episodeId) filter.episodeId = episodeId;
 
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Đếm tổng số bình luận
+    const totalComments = await Comment.countDocuments(filter);
+
+    // Lấy bình luận theo phân trang
     const comments = await Comment.find(filter)
       .populate('userId', 'username')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
-    res.json(comments);
+    res.json({
+      comments,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalComments / limit),
+      totalComments,
+    });
   } catch (err) {
     console.error('Error fetching comments:', err);
     res.status(500).json({ message: 'Error fetching comments' });
   }
 };
+
 
 
 exports.deleteComment = async (req, res) => {

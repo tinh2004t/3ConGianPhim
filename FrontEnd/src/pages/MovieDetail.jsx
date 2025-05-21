@@ -69,7 +69,6 @@ const MovieDetail = () => {
   const tabs = [
     { id: 'episodes', label: 'Danh sách tập' },
     { id: 'synopsis', label: 'Nội dung' },
-    { id: 'comments', label: 'Bình luận' }
   ];
 
   if (loading) {
@@ -188,9 +187,7 @@ const MovieDetail = () => {
             </div>
           )}
 
-          {activeTab === 'comments' && (
-            <div className="text-gray-400 italic">Tính năng bình luận đang phát triển.</div>
-          )}
+          
         </div>
       </div>
     </div>
