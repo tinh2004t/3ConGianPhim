@@ -158,12 +158,12 @@ const MovieDetail = () => {
           </div>
 
           <button
-            onClick={handleAddToFavorites}
-            className="text-red-500 hover:text-red-400 text-xl"
-            title="Thêm vào yêu thích"
-          >
-            ❤️
-          </button>
+          onClick={handleAddToFavorites}
+          className="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition flex items-center gap-2"
+        >
+          <span>Yêu Thích</span>
+          <span>❤️</span>
+        </button>
         </div>
 
 

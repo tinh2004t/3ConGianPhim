@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import episodeApi from './../api/episodeApi';
 import movieApi from './../api/movieApi';
 import { useParams, useNavigate } from 'react-router-dom';
+import userApi from '../api/userApi';
 
 const MoviePlayer = () => {
   const { movieId, episodeId } = useParams();
@@ -60,6 +61,28 @@ useEffect(() => {
       handleSelectEpisode(nextEp);
     }
   };
+  const handleAddToFavorites = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    alert('Vui lòng đăng nhập để thêm vào yêu thích!');
+    return navigate('/login');
+  }
+
+  if (!movieId) {
+    alert('Lỗi: Không xác định được phim!');
+    return;
+  }
+
+  try {
+    await userApi.addFavorite(movieId, token);
+    alert('Đã thêm vào danh sách yêu thích!');
+  } catch (error) {
+    console.error('Lỗi khi thêm vào yêu thích:', error.response?.data || error.message);
+    alert(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
+  }
+};
+
 
   // Lấy URL video theo server
   const getVideoUrl = () => {
@@ -81,6 +104,7 @@ useEffect(() => {
       <div className="relative z-40 bg-gray-800 rounded-xl p-4 mb-6 shadow-md">
         <h2 className="text-2xl font-bold">{movieTitle || 'Đang tải tên phim...'}</h2>
         <p className="text-gray-300 mt-1">Đang xem: Tập {selectedEpisode.episodeNumber}</p>
+        
 
         <div className="mt-3 flex flex-wrap gap-3">
           {selectedEpisode?.videoSources?.map((_, index) => (
@@ -126,6 +150,15 @@ useEffect(() => {
           >
             Tải về
           </a>
+          
+
+        <button
+          onClick={handleAddToFavorites}
+          className="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition flex items-center gap-2"
+        >
+          <span>Yêu Thích</span>
+          <span>❤️</span>
+        </button>
         </div>
       </div>
 
