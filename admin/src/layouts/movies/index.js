@@ -5,11 +5,7 @@ import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 import DataTable from "examples/Tables/DataTable";
 import PropTypes from "prop-types";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-
+import { Link } from "react-router-dom";
 const ImageCell = ({ value }) => (
   <MDBox
     component="img"
@@ -64,23 +60,21 @@ function MoviesManagement() {
     {
       Header: "Poster",
       accessor: "posterUrl",
-      width: "10%",
+      width: "15%",
       align: "center",
       Cell: ImageCell,
     },
-    { Header: "Tiêu đề", accessor: "title", width: "20%", align: "left" },
-    { Header: "Mô tả", accessor: "description", width: "25%", align: "left" },
+    { Header: "Tiêu đề", accessor: "title", width: "25%", align: "left" },
     {
       Header: "Thể loại",
       accessor: "genres",
-      width: "15%",
+      width: "20%",
       align: "left",
       Cell: ({ value }) => value.join(", "),
     },
-    { Header: "Năm PH", accessor: "releaseYear", width: "8%", align: "center" },
-    { Header: "Trạng thái", accessor: "status", width: "10%", align: "center" },
+    { Header: "Trạng thái", accessor: "status", width: "15%", align: "center" },
     { Header: "Tập", accessor: "totalEpisodes", width: "8%", align: "center" },
-    { Header: "Lượt xem", accessor: "viewCount", width: "10%", align: "center" },
+    { Header: "Lượt xem", accessor: "viewCount", width: "15%", align: "center" },
     {
       Header: "Hành động",
       accessor: "action",
@@ -88,7 +82,18 @@ function MoviesManagement() {
       align: "center",
       Cell: () => (
         <MDBox display="flex" gap={1}>
-          <MDButton variant="gradient" color="info" size="small">
+          <MDButton
+            component={Link}
+            to="/movies/edit/:id"
+            variant="gradient"
+            color="info"
+            size="small"
+            fullWidth={{ xs: true, sm: false }}
+            sx={{
+              py: 0.5,
+              whiteSpace: "nowrap",
+            }}
+          >
             Sửa
           </MDButton>
           <MDButton variant="gradient" color="error" size="small">
@@ -98,30 +103,6 @@ function MoviesManagement() {
       ),
     },
   ];
-
-  // Xử lý thêm phim mới
-  const handleAddMovie = () => {
-    const newMovie = {
-      id: moviesData.length + 1,
-      ...formData,
-      viewCount: 0,
-    };
-
-    setMoviesData([...moviesData, newMovie]);
-    setShowForm(false);
-    setFormData({
-      title: "",
-      description: "",
-      posterUrl: "",
-      trailerUrl: "",
-      genres: [],
-      releaseYear: new Date().getFullYear(),
-      status: "ongoing",
-      country: "Việt Nam",
-      totalEpisodes: 1,
-    });
-  };
-
   // Tạo rows cho bảng
   const rows = moviesData.map((movie) => ({
     posterUrl: movie.posterUrl,
@@ -130,9 +111,7 @@ function MoviesManagement() {
         {movie.title}
       </MDTypography>
     ),
-    description: <MDTypography variant="caption">{movie.description}</MDTypography>,
     genres: movie.genres,
-    releaseYear: <MDTypography variant="caption">{movie.releaseYear}</MDTypography>,
     status: (
       <MDTypography variant="caption">
         {movie.status === "ongoing" ? "Đang phát" : "Hoàn thành"}
@@ -144,189 +123,92 @@ function MoviesManagement() {
   }));
 
   return (
-    <MDBox pt={4} pb={3} sx={{ maxWidth: 1400, margin: "0 auto" }}>
+    <MDBox
+      pt={4}
+      pb={3}
+      sx={{
+        width: "calc(100% - 250px)",
+        ml: "250px",
+        px: { xs: 2, sm: 3 },
+        overflowX: "auto",
+        transition: "all 0.3s ease",
+      }}
+    >
       {/* Header */}
       <MDBox
         display="flex"
         justifyContent="space-between"
         alignItems="center"
         mb={3}
-        sx={{
-          flexDirection: { xs: "column", sm: "row" },
-          gap: { xs: 2, sm: 0 },
-        }}
+        flexWrap="wrap"
+        gap={2}
       >
-        <MDTypography variant="h4" sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
+        <MDTypography
+          variant="h4"
+          sx={{
+            fontSize: { xs: "1.25rem", sm: "1.5rem", md: "2rem" },
+            width: { xs: "100%", sm: "auto" },
+          }}
+        >
           Quản lý Phim
         </MDTypography>
 
-        <MDBox display="flex" gap={2}>
+        <MDBox
+          display="flex"
+          gap={2}
+          width={{ xs: "100%", sm: "auto" }}
+          flexDirection={{ xs: "column", sm: "row" }}
+        >
           <MDInput
             placeholder="Tìm kiếm phim..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<i className="fas fa-search" />}
+            fullWidth
             sx={{
-              width: { xs: "100%", sm: 300 },
               "& .MuiInputBase-input": {
-                padding: "12px 16px",
+                py: 1,
+                fontSize: { xs: "0.875rem", sm: "1rem" },
               },
             }}
           />
           <MDButton
+            component={Link}
+            to="/movies/create"
             variant="gradient"
             color="dark"
-            onClick={() => setShowForm(!showForm)}
+            fullWidth={{ xs: true, sm: false }}
             sx={{
-              padding: "12px 24px",
-              fontSize: "0.875rem",
-              minWidth: 160,
+              py: 1.5,
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              whiteSpace: "nowrap",
             }}
           >
-            {showForm ? "Đóng Form" : "Thêm Phim Mới"}
+            Thêm Phim Mới
           </MDButton>
         </MDBox>
       </MDBox>
 
-      {/* Form thêm mới */}
-      {showForm && (
-        <MDBox
-          mb={3}
-          p={3}
-          borderRadius="lg"
-          bgColor="white"
-          shadow="md"
-          sx={{
-            width: { xs: "100%", md: "80%" },
-            margin: "0 auto",
-          }}
-        >
-          <MDTypography variant="h6" mb={3}>
-            Thông tin phim mới
-          </MDTypography>
-
-          <MDBox
-            component="form"
-            display="grid"
-            gridTemplateColumns={{ xs: "1fr", md: "repeat(2, 1fr)" }}
-            gap={3}
-          >
-            {/* Cột trái */}
-            <MDBox>
-              <MDInput
-                label="Tiêu đề"
-                fullWidth
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-
-              <MDInput
-                label="Mô tả"
-                multiline
-                rows={4}
-                fullWidth
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                sx={{ mt: 2 }}
-              />
-
-              <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel>Thể loại</InputLabel>
-                <Select
-                  multiple
-                  value={formData.genres}
-                  onChange={(e) => setFormData({ ...formData, genres: e.target.value })}
-                >
-                  {["Hài", "Hành động", "Tình cảm", "Kinh dị"].map((genre) => (
-                    <MenuItem key={genre} value={genre}>
-                      {genre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </MDBox>
-
-            {/* Cột phải */}
-            <MDBox>
-              <MDInput
-                label="Poster URL"
-                fullWidth
-                value={formData.posterUrl}
-                onChange={(e) => setFormData({ ...formData, posterUrl: e.target.value })}
-              />
-
-              <MDInput
-                label="Trailer URL"
-                fullWidth
-                value={formData.trailerUrl}
-                onChange={(e) => setFormData({ ...formData, trailerUrl: e.target.value })}
-                sx={{ mt: 2 }}
-              />
-
-              <MDBox display="flex" gap={2} mt={2}>
-                <FormControl fullWidth>
-                  <InputLabel>Quốc gia</InputLabel>
-                  <Select
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  >
-                    <MenuItem value="Việt Nam">Việt Nam</MenuItem>
-                    <MenuItem value="Hàn Quốc">Hàn Quốc</MenuItem>
-                    <MenuItem value="Trung Quốc">Trung Quốc</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth>
-                  <InputLabel>Trạng thái</InputLabel>
-                  <Select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    <MenuItem value="ongoing">Đang phát</MenuItem>
-                    <MenuItem value="completed">Hoàn thành</MenuItem>
-                  </Select>
-                </FormControl>
-              </MDBox>
-
-              <MDBox display="flex" gap={2} mt={2}>
-                <MDInput
-                  label="Năm phát hành"
-                  type="number"
-                  fullWidth
-                  value={formData.releaseYear}
-                  onChange={(e) => setFormData({ ...formData, releaseYear: e.target.value })}
-                />
-
-                <MDInput
-                  label="Số tập"
-                  type="number"
-                  fullWidth
-                  value={formData.totalEpisodes}
-                  onChange={(e) => setFormData({ ...formData, totalEpisodes: e.target.value })}
-                />
-              </MDBox>
-            </MDBox>
-          </MDBox>
-
-          <MDButton
-            variant="gradient"
-            color="success"
-            fullWidth
-            sx={{ mt: 3, height: 48 }}
-            onClick={handleAddMovie}
-          >
-            Lưu phim mới
-          </MDButton>
-        </MDBox>
-      )}
-
       {/* Bảng dữ liệu */}
       <DataTable
-        table={{ columns, rows }}
+        table={{
+          columns: columns.map((col) => ({
+            ...col,
+            width: `${col.width}%`,
+          })),
+          rows,
+        }}
         isSorted={true}
         entriesPerPage={5}
         showTotalEntries={true}
         noEndBorder
+        sx={{
+          "& .MuiTable-root": {
+            minWidth: 800,
+            fontSize: { xs: "0.75rem", sm: "0.875rem" },
+          },
+          "& .MuiTableCell-root": {
+            py: 1,
+            px: { xs: 0.5, sm: 1 },
+          },
+        }}
       />
     </MDBox>
   );

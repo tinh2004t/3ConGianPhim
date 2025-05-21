@@ -7,21 +7,32 @@
 */
 
 // Material Dashboard 2 React layouts
-import Genres from "layouts/genres";
-import Movies from "layouts/movies";
-import Episodes from "layouts/episodes";
-import Schedules from "layouts/schedules";
-import Comments from "layouts/comments";
-import Reports from "layouts/reports";
-import Users from "layouts/users";
-import Dashboard from "layouts/dashboard";
-import SignIn from "layouts/authentication/sign-in";
-import SignUp from "layouts/authentication/sign-up";
+import Genres from "./layouts/genres";
+import Movies from "./layouts/movies";
+import Episodes from "./layouts/episodes";
+import Schedules from "./layouts/schedules";
+import Comments from "./layouts/comments";
+import Reports from "./layouts/reports";
+import Users from "./layouts/users";
+import Dashboard from "./layouts/dashboard";
+import CreateMovie from "layouts/movies/CreateMovie";
+import EditMovie from "layouts/movies/EditMovie";
 
 // @mui icons
 import Icon from "@mui/material/Icon";
 
 const routes = [
+  // Redirect mặc định
+  {
+    type: "redirect",
+    name: "Trang chủ",
+    key: "home",
+    icon: <Icon fontSize="small">home</Icon>,
+    route: "/",
+    redirect: "/dashboard",
+  },
+
+  // Dashboard
   {
     type: "collapse",
     name: "Dashboard",
@@ -31,6 +42,7 @@ const routes = [
     component: <Dashboard />,
   },
 
+  // Quản lý nội dung
   {
     type: "collapse",
     name: "Thể loại",
@@ -38,22 +50,6 @@ const routes = [
     icon: <Icon fontSize="small">category</Icon>,
     route: "/genres",
     component: <Genres />,
-  },
-  {
-    type: "collapse",
-    name: "Sign In",
-    key: "sign-in",
-    icon: <Icon fontSize="small">login</Icon>,
-    route: "/authentication/sign-in",
-    component: <SignIn />,
-  },
-  {
-    type: "collapse",
-    name: "Sign Up",
-    key: "sign-up",
-    icon: <Icon fontSize="small">assignment</Icon>,
-    route: "/authentication/sign-up",
-    component: <SignUp />,
   },
   {
     type: "collapse",
@@ -71,6 +67,8 @@ const routes = [
     route: "/episodes",
     component: <Episodes />,
   },
+
+  // Quản lý lịch chiếu
   {
     type: "collapse",
     name: "Lịch chiếu",
@@ -80,12 +78,22 @@ const routes = [
     component: <Schedules />,
   },
 
-  // Quản lý tương tác
+  // Quản lý người dùng
+  {
+    type: "collapse",
+    name: "Người dùng",
+    key: "users",
+    icon: <Icon fontSize="small">people</Icon>,
+    route: "/users",
+    component: <Users />,
+  },
+
+  // Tương tác
   {
     type: "collapse",
     name: "Bình luận",
     key: "comments",
-    icon: <Icon fontSize="small">comment</Icon>,
+    icon: <Icon fontSize="small">chat</Icon>, // Sửa icon
     route: "/comments",
     component: <Comments />,
   },
@@ -97,15 +105,24 @@ const routes = [
     route: "/reports",
     component: <Reports />,
   },
-
-  // Quản lý người dùng
+  // Thêm phim mới
   {
     type: "collapse",
-    name: "Người dùng",
-    key: "users",
-    icon: <Icon fontSize="small">people</Icon>,
-    route: "/users",
-    component: <Users />,
+    name: "Thêm phim",
+    key: "create-movie",
+    icon: <Icon fontSize="small">add_circle</Icon>,
+    route: "/movies/create",
+    component: <CreateMovie />,
+  },
+
+  // Chỉnh sửa phim
+  {
+    type: "collapse",
+    name: "Chỉnh sửa phim",
+    key: "edit-movie",
+    icon: <Icon fontSize="small">edit_note</Icon>,
+    route: "/movies/edit/:id",
+    component: <EditMovie />,
   },
 ];
 

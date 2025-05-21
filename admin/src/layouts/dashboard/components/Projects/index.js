@@ -1,25 +1,5 @@
-/**
-=========================================================
-* Material Dashboard 2 React - v2.2.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-react
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
-import { useState } from "react";
-
-// @mui material components
 import Card from "@mui/material/Card";
 import Icon from "@mui/material/Icon";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -28,43 +8,49 @@ import MDTypography from "components/MDTypography";
 // Material Dashboard 2 React examples
 import DataTable from "examples/Tables/DataTable";
 
-// Data
-import data from "layouts/dashboard/components/Projects/data";
+function MoviesTableUI() {
+  const moviesData = [
+    {
+      id: 1,
+      title: "Phim hành động 1",
+      genre: "Hành động",
+      duration: "120 phút",
+      releaseDate: "2023-10-15",
+      views: "1.2M",
+    },
+    {
+      id: 2,
+      title: "Phim lãng mạn 1",
+      genre: "Lãng mạn",
+      duration: "105 phút",
+      releaseDate: "2023-09-20",
+      views: "890K",
+    },
+    {
+      id: 3,
+      title: "Phim kinh dị 1",
+      genre: "Kinh dị",
+      duration: "95 phút",
+      releaseDate: "2023-11-05",
+      views: "1.5M",
+    },
+  ];
 
-function Projects() {
-  const { columns, rows } = data();
-  const [menu, setMenu] = useState(null);
-
-  const openMenu = ({ currentTarget }) => setMenu(currentTarget);
-  const closeMenu = () => setMenu(null);
-
-  const renderMenu = (
-    <Menu
-      id="simple-menu"
-      anchorEl={menu}
-      anchorOrigin={{
-        vertical: "top",
-        horizontal: "left",
-      }}
-      transformOrigin={{
-        vertical: "top",
-        horizontal: "right",
-      }}
-      open={Boolean(menu)}
-      onClose={closeMenu}
-    >
-      <MenuItem onClick={closeMenu}>Action</MenuItem>
-      <MenuItem onClick={closeMenu}>Another action</MenuItem>
-      <MenuItem onClick={closeMenu}>Something else</MenuItem>
-    </Menu>
-  );
+  const columns = [
+    { Header: "ID", accessor: "id", width: "10%" },
+    { Header: "TÊN PHIM", accessor: "title", width: "30%" },
+    { Header: "THỂ LOẠI", accessor: "genre", width: "15%" },
+    { Header: "THỜI LƯỢNG", accessor: "duration", width: "15%" },
+    { Header: "NGÀY PHÁT HÀNH", accessor: "releaseDate", width: "15%" },
+    { Header: "LƯỢT XEM", accessor: "views", width: "15%" },
+  ];
 
   return (
     <Card>
       <MDBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
         <MDBox>
           <MDTypography variant="h6" gutterBottom>
-            Dự án
+            Danh sách phim
           </MDTypography>
           <MDBox display="flex" alignItems="center" lineHeight={0}>
             <Icon
@@ -74,23 +60,18 @@ function Projects() {
                 mt: -0.5,
               }}
             >
-              done
+              movie
             </Icon>
             <MDTypography variant="button" fontWeight="regular" color="text">
-              &nbsp;<strong>30 done</strong> this month
+              &nbsp;<strong>{moviesData.length} phim</strong> trong thư viện
             </MDTypography>
           </MDBox>
         </MDBox>
-        <MDBox color="text" px={2}>
-          <Icon sx={{ cursor: "pointer", fontWeight: "bold" }} fontSize="small" onClick={openMenu}>
-            more_vert
-          </Icon>
-        </MDBox>
-        {renderMenu}
       </MDBox>
+
       <MDBox>
         <DataTable
-          table={{ columns, rows }}
+          table={{ columns, rows: moviesData }}
           showTotalEntries={false}
           isSorted={false}
           noEndBorder
@@ -101,4 +82,4 @@ function Projects() {
   );
 }
 
-export default Projects;
+export default MoviesTableUI;

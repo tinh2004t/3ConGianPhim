@@ -1,21 +1,7 @@
-/**
-=========================================================
-* Material Dashboard 2 React - v2.2.0
-=========================================================
-* Bản quyền 2023 Creative Tim (https://www.creative-tim.com)
-* Thiết kế bởi www.creative-tim.com
-=========================================================
-*/
-
-// @mui material components
 import Card from "@mui/material/Card";
 import Icon from "@mui/material/Icon";
-
-// Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-
-// Material Dashboard 2 React example components
 import TimelineItem from "examples/Timeline/TimelineItem";
 
 function TongQuanHoatDong() {
@@ -23,7 +9,7 @@ function TongQuanHoatDong() {
     <Card sx={{ height: "100%" }}>
       <MDBox pt={3} px={3}>
         <MDTypography variant="h6" fontWeight="medium">
-          Tổng quan hoạt động
+          Hoạt động gần đây
         </MDTypography>
         <MDBox mt={0} mb={2}>
           <MDTypography variant="button" color="text" fontWeight="regular">
@@ -32,41 +18,41 @@ function TongQuanHoatDong() {
             </MDTypography>
             &nbsp;
             <MDTypography variant="button" color="text" fontWeight="medium">
-              24%
+              15%
             </MDTypography>{" "}
-            trong tháng này
+            tăng trưởng lượt xem
           </MDTypography>
         </MDBox>
       </MDBox>
       <MDBox p={2}>
         <TimelineItem
           color="success"
-          icon="notifications"
-          title="4.000.000đ, Cập nhật thiết kế"
+          icon="play_circle"
+          title="Phim 'Avengers: Endgame' đạt 1 triệu lượt xem"
           dateTime="22 Th12 19:20"
         />
         <TimelineItem
-          color="error"
-          icon="inventory_2"
-          title="Đơn hàng mới #1832412"
+          color="info"
+          icon="movie"
+          title="Thêm 5 phim mới vào thư viện"
           dateTime="21 Th12 23:00"
         />
         <TimelineItem
-          color="info"
-          icon="shopping_cart"
-          title="Thanh toán máy chủ cho Tháng 4"
+          color="warning"
+          icon="person_add"
+          title="1.250 người dùng mới đăng ký"
           dateTime="21 Th12 21:34"
         />
         <TimelineItem
-          color="warning"
-          icon="payment"
-          title="Thêm thẻ mới cho đơn hàng #4395133"
+          color="primary"
+          icon="star"
+          title="Phim 'Spider-Man' nhận 500 đánh giá 5 sao"
           dateTime="20 Th12 02:20"
         />
         <TimelineItem
-          color="primary"
-          icon="vpn_key"
-          title="Thêm phương thức thanh toán mới"
+          color="error"
+          icon="update"
+          title="Cập nhật phiên bản ứng dụng mới"
           dateTime="18 Th12 04:54"
           lastItem
         />
