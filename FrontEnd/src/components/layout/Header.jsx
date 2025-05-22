@@ -75,7 +75,7 @@ const Header = () => {
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search movies or TV shows..."
+              placeholder="Tìm movies hoặc TV shows..."
               className="bg-gray-800 text-white px-4 py-2 rounded-full w-full focus:outline-none focus:ring-2 focus:ring-red-600"
             />
             <button

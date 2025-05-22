@@ -5,8 +5,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import userApi from '../api/userApi';
 import commentApi from '../api/commentApi';
 
-
-
 const MoviePlayer = () => {
   const { movieId, episodeId } = useParams();
   const navigate = useNavigate();
@@ -16,69 +14,106 @@ const MoviePlayer = () => {
   const [commentText, setCommentText] = useState('');
   const [user, setUser] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
-
-
-
-
   const [episodes, setEpisodes] = useState([]);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [selectedServer, setSelectedServer] = useState('Server #1');
+  const [loading, setLoading] = useState(true);
 
-  // Load danh sách tập và chọn tập theo URL
+  // Load danh sách tập và dữ liệu cơ bản
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
-        const epRes = await episodeApi.getEpisodesByMovieId(movieId);
+        setLoading(true);
+        
+        // Load episodes và movie title
+        const [epRes, movieRes] = await Promise.all([
+          episodeApi.getEpisodesByMovieId(movieId),
+          movieApi.getById(movieId)
+        ]);
+        
         const fetchedEpisodes = epRes.data;
-
         setEpisodes(fetchedEpisodes);
+        setMovieTitle(movieRes.data.title);
 
-        // ✅ Gọi API lấy tên phim
-        const movieRes = await movieApi.getById(movieId);
-        setMovieTitle(movieRes.data.title); // ✅ hoặc movieRes.data.name nếu key là 'name'
-
-        if (fetchedEpisodes.length > 0) {
-          const firstEpisodeId = fetchedEpisodes[0]._id;
-          const firstEpisodeRes = await episodeApi.getEpisodeById(firstEpisodeId);
-          setSelectedEpisode(firstEpisodeRes.data);
-        }
+        // Load user info
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
 
-        // Lấy bình luận
-        const commentRes = await commentApi.getComments({
-          movieId,
-          episodeId: episodeId || undefined,
-        });
-        setComments(Array.isArray(commentRes.data.comments) ? commentRes.data.comments : []);
       } catch (err) {
-        console.error('Lỗi khi tải dữ liệu tập phim hoặc tên phim:', err);
+        console.error('Lỗi khi tải dữ liệu ban đầu:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
-  }, [movieId, episodeId, navigate]);
+    fetchInitialData();
+  }, [movieId]);
 
-  // Khi chọn tập
+  // Load episode cụ thể và comments khi episodeId thay đổi
+  useEffect(() => {
+    const loadEpisodeAndComments = async () => {
+      if (!episodes.length) return;
+
+      try {
+        let targetEpisodeId = episodeId;
+        
+        // Nếu không có episodeId trong URL, chọn tập đầu tiên
+        if (!episodeId && episodes.length > 0) {
+          targetEpisodeId = episodes[0]._id;
+          navigate(`/watch/${movieId}/episodes/${targetEpisodeId}`, { replace: true });
+          return;
+        }
+
+        // Load episode được chọn
+        if (targetEpisodeId) {
+          const episodeRes = await episodeApi.getEpisodeById(targetEpisodeId);
+          setSelectedEpisode(episodeRes.data);
+
+          // Add to history
+          const token = localStorage.getItem('token');
+          if (token) {
+            await userApi.addHistory({
+              movieId,
+              episodeId: targetEpisodeId,
+            }, token);
+          }
+
+          // Load comments cho episode này
+          const commentRes = await commentApi.getComments({
+            movieId,
+            episodeId: targetEpisodeId,
+          });
+          setComments(Array.isArray(commentRes.data.comments) ? commentRes.data.comments : []);
+        }
+
+      } catch (err) {
+        console.error('Lỗi khi tải tập phim:', err);
+      }
+    };
+
+    loadEpisodeAndComments();
+  }, [episodes, episodeId, movieId, navigate]);
+
+  // Khi chọn tập - chỉ cần navigate, useEffect sẽ handle việc còn lại
   const handleSelectEpisode = async (episode) => {
-    try {
-      const res = await episodeApi.getEpisodeById(episode._id);
-      setSelectedEpisode(res.data);
-      navigate(`/watch/${movieId}/episodes/${episode._id}`);
-    } catch (err) {
-      console.error('Lỗi khi chọn tập phim:', err);
-    }
+    // Reset server về server đầu tiên khi chuyển tập
+    setSelectedServer('Server #1');
+    
+    // Navigate đến URL mới - useEffect sẽ tự động load episode mới
+    navigate(`/watch/${movieId}/episodes/${episode._id}`);
   };
 
   // Tập tiếp theo
   const handleNextEpisode = () => {
-    if (!selectedEpisode) return;
-    const index = episodes.findIndex(ep => ep._id === selectedEpisode._id);
-    if (index !== -1 && index < episodes.length - 1) {
-      const nextEp = episodes[index + 1];
+    if (!selectedEpisode || !episodes.length) return;
+    
+    const currentIndex = episodes.findIndex(ep => ep._id === selectedEpisode._id);
+    if (currentIndex !== -1 && currentIndex < episodes.length - 1) {
+      const nextEp = episodes[currentIndex + 1];
       handleSelectEpisode(nextEp);
     }
   };
+
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
 
@@ -93,7 +128,7 @@ const MoviePlayer = () => {
       };
 
       const res = await commentApi.createComment(data, token);
-      setComments([res.data, ...comments]); // Thêm vào đầu danh sách
+      setComments([res.data, ...comments]);
       setCommentText('');
     } catch (err) {
       console.error('Lỗi gửi bình luận:', err);
@@ -115,7 +150,6 @@ const MoviePlayer = () => {
       alert('Xóa bình luận thất bại');
     }
   };
-
 
   const handleAddToFavorites = async () => {
     const token = localStorage.getItem('token');
@@ -139,7 +173,6 @@ const MoviePlayer = () => {
     }
   };
 
-
   // Lấy URL video theo server
   const getVideoUrl = () => {
     if (!selectedEpisode || !selectedEpisode.videoSources) return '';
@@ -147,7 +180,7 @@ const MoviePlayer = () => {
     return selectedEpisode.videoSources[index]?.url || selectedEpisode.videoSources[0]?.url;
   };
 
-  if (!selectedEpisode) {
+  if (loading || !selectedEpisode) {
     return <div className="text-center py-10 text-gray-300">Đang tải dữ liệu tập phim...</div>;
   }
 
@@ -160,7 +193,6 @@ const MoviePlayer = () => {
       <div className="relative z-40 bg-gray-800 rounded-xl p-4 mb-6 shadow-md">
         <h2 className="text-2xl font-bold">{movieTitle || 'Đang tải tên phim...'}</h2>
         <p className="text-gray-300 mt-1">Đang xem: Tập {selectedEpisode.episodeNumber}</p>
-
 
         <div className="mt-3 flex flex-wrap gap-3">
           {selectedEpisode?.videoSources?.map((_, index) => (
@@ -181,6 +213,7 @@ const MoviePlayer = () => {
       {/* Video Player */}
       <div className="relative mb-4 aspect-video bg-black rounded-2xl overflow-hidden shadow-lg z-40">
         <iframe
+          key={`${selectedEpisode._id}-${selectedServer}`} // Force re-render khi đổi tập hoặc server
           src={getVideoUrl()}
           title="Video Player"
           allowFullScreen
@@ -194,7 +227,7 @@ const MoviePlayer = () => {
           <button
             onClick={handleNextEpisode}
             disabled={episodes.findIndex(ep => ep._id === selectedEpisode._id) === episodes.length - 1}
-            className="bg-gray-800 px-4 py-2 rounded hover:bg-red-600 transition disabled:opacity-50"
+            className="bg-gray-800 px-4 py-2 rounded hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Tập tiếp theo
           </button>
@@ -206,7 +239,6 @@ const MoviePlayer = () => {
           >
             Tải về
           </a>
-
 
           <button
             onClick={handleAddToFavorites}
@@ -227,10 +259,11 @@ const MoviePlayer = () => {
               <button
                 key={ep._id}
                 onClick={() => handleSelectEpisode(ep)}
-                className={`px-4 py-2 rounded-xl border ${selectedEpisode._id === ep._id
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-800 text-gray-300'
-                  } hover:bg-red-500 transition`}
+                className={`px-4 py-2 rounded-xl border transition-colors ${
+                  selectedEpisode._id === ep._id
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-gray-800 text-gray-300 border-gray-600'
+                  } hover:bg-red-500 hover:border-red-500`}
               >
                 {ep.episodeNumber}
               </button>
@@ -275,51 +308,49 @@ const MoviePlayer = () => {
             <div className="text-gray-400">Chưa có bình luận nào.</div>
           )}
           {comments.map((comment) => (
-  <div
-    key={comment._id}
-    className="p-3 bg-gray-800 rounded-xl relative group"
-  >
-    {/* Username */}
-    <p className="text-sm font-semibold">
-      {comment.userId?.username || 'Ẩn danh'}
-    </p>
-    <p>{comment.content}</p>
+            <div
+              key={comment._id}
+              className="p-3 bg-gray-800 rounded-xl relative group"
+            >
+              {/* Username */}
+              <p className="text-sm font-semibold">
+                {comment.userId?.username || 'Ẩn danh'}
+              </p>
+              <p>{comment.content}</p>
 
-    {/* Ba chấm + menu xóa */}
-    {user && user._id === comment.user?._id && (
-      <div className="absolute top-2 right-2">
-        <div className="relative inline-block text-left">
-          <button
-            onClick={() =>
-              setOpenMenuId(openMenuId === comment._id ? null : comment._id)
-            }
-            className="text-gray-400 hover:text-red-400 focus:outline-none"
-          >
-            ⋮
-          </button>
+              {/* Ba chấm + menu xóa */}
+              {user && user._id === comment.user?._id && (
+                <div className="absolute top-2 right-2">
+                  <div className="relative inline-block text-left">
+                    <button
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === comment._id ? null : comment._id)
+                      }
+                      className="text-gray-400 hover:text-red-400 focus:outline-none"
+                    >
+                      ⋮
+                    </button>
 
-          {openMenuId === comment._id && (
-            <div className="absolute right-0 mt-2 w-24 bg-white rounded-md shadow-lg z-50">
-              <button
-                onClick={() => {
-                  handleDeleteComment(comment._id);
-                  setOpenMenuId(null);
-                }}
-                className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-100 text-left"
-              >
-                Xóa
-              </button>
+                    {openMenuId === comment._id && (
+                      <div className="absolute right-0 mt-2 w-24 bg-white rounded-md shadow-lg z-50">
+                        <button
+                          onClick={() => {
+                            handleDeleteComment(comment._id);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-100 text-left"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       </div>
-    )}
-  </div>
-))}
-
-        </div>
-      </div>
-
     </div>
   );
 };

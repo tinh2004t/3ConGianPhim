@@ -1,27 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import userApi from '../api/userApi';
 import { useNavigate } from 'react-router-dom';
-import { m } from 'framer-motion';
 
 const Account = () => {
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUserAndFavorites = async () => {
+    const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('token');
 
         // Lấy user
         const userResponse = await userApi.getMe(token);
-        setUser(userResponse.data);  // lưu đúng data user
+        setUser(userResponse.data);
 
         // Lấy favorites
         const favResponse = await userApi.getFavorites(token);
-        setFavorites(favResponse.data); // lưu đúng data favorites
+        setFavorites(favResponse.data);
+
+        // Lấy history
+        const historyResponse = await userApi.getHistory(token);
+        console.log("History data:", historyResponse.data);
+
+        setHistory(historyResponse.data);
 
       } catch (error) {
         console.error('Lỗi khi gọi API:', error);
@@ -30,24 +36,49 @@ const Account = () => {
       }
     };
 
-    fetchUserAndFavorites();
+    fetchUserData();
   }, []);
 
   const handleRemoveFavorite = async (movieId) => {
     try {
       const token = localStorage.getItem('token');
       await userApi.deleteFavorite(movieId, token);
-      // Cập nhật state để xóa phim khỏi UI mà không cần reload
       setFavorites(favorites.filter(movie => movie._id !== movieId));
     } catch (error) {
-      console.error('Lỗi khi xóa phim yêu thích:', movieId);
       console.error('Lỗi khi xóa phim yêu thích:', error);
     }
   };
 
-  const handlePlayMovie = (movieId) => {
-    navigate(`/movies/${movieId}`);
+  const handlePlayMovie = (movieId, episodeId = null) => {
+    if (episodeId) {
+      navigate(`/watch/${movieId}/episodes/${episodeId}`);
+    } else {
+      navigate(`/movies/${movieId}`);
+    }
   };
+
+
+  const formatWatchDate = (dateString) => {
+  if (!dateString) return 'Chưa xem';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+  if (diffDays > 0) {
+    return `${diffDays} ngày trước`;
+  } else if (diffHours > 0) {
+    return `${diffHours} giờ trước`;
+  } else if (diffMinutes > 0) {
+    return `${diffMinutes} phút trước`;
+  } else {
+    return 'Vừa xem';
+  }
+};
+
 
   if (loading) {
     return (
@@ -89,7 +120,6 @@ const Account = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-
                 </div>
                 <h3 className="text-4xl font-bold text-white mb-3">{user.username}</h3>
                 <p className="text-red-100 text-xl mb-2">{user.email}</p>
@@ -116,7 +146,7 @@ const Account = () => {
                   <svg className="w-8 h-8 mx-auto mb-3 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <div className="text-3xl font-bold mb-1">{user.history?.length || 0}</div>
+                  <div className="text-3xl font-bold mb-1">{history.length}</div>
                   <div className="text-blue-100 text-sm font-medium">Watched</div>
                 </div>
                 <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 text-center text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
@@ -129,45 +159,125 @@ const Account = () => {
                   <div className="text-purple-100 text-sm font-medium">Days Active</div>
                 </div>
               </div>
-
-
-
             </div>
           </div>
         );
 
-
       case 'history':
         return (
           <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl border border-gray-700 p-6">
-            <div className="flex items-center mb-6">
-              <svg className="w-8 h-8 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-2xl font-bold text-white">Watching History</h3>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <svg className="w-8 h-8 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-2xl font-bold text-white">Watching History</h3>
+              </div>
+              <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                {history.length} items
+              </span>
             </div>
 
-            {user.history && user.history.length > 0 ? (
-              <div className="space-y-3">
-                {user.history.map((item, index) => (
-                  <div key={index} className="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-red-500 transition-all hover:bg-gray-600">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 bg-red-500 rounded-full mr-3"></div>
-                        <span className="text-white font-medium">{item}</span>
+            {history && history.length > 0 ? (
+              <div className="space-y-4">
+                {history.map((item, index) => (
+                  <div 
+                    key={index} 
+                    className="bg-gray-700 rounded-lg border border-gray-600 hover:border-red-500 transition-all hover:bg-gray-600 overflow-hidden group"
+                  >
+                    <div className="flex items-center p-4">
+                      {/* Movie Poster */}
+                      <div className="flex-shrink-0 mr-4">
+                        <img
+                          src={item.movie?.posterUrl || '/default-movie-poster.png'}
+                          alt={item.movie?.title || 'Movie'}
+                          className="w-16 h-20 object-cover rounded-md border border-gray-500"
+                        />
                       </div>
-                      <span className="text-gray-400 text-sm">Recently watched</span>
+
+                      {/* Movie Info */}
+                      <div className="flex-grow">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-white font-semibold text-lg leading-tight mb-1">
+                              {item.movie?.title || 'Unknown Movie'}
+                            </h4>
+                            {item.episode && (
+                              <p className="text-red-400 text-sm mb-1">
+                                Tập {item.episode.episodeNumber}
+                              </p>
+                            )}
+                            <div className="flex items-center space-x-4 text-sm text-gray-400">
+                              <span>{item.movie?.releaseYear || 'Unknown Year'}</span>
+                              <span>•</span>
+                              <span>{formatWatchDate(item.updatedAt)}</span>
+                              {item.movie?.genre && (
+                                <>
+                                  <span>•</span>
+                                  <span>{item.movie.genre}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition-colors"
+                              onClick={() => handlePlayMovie(item.movie?._id, item.episode?._id)}
+                              title="Continue Watching"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </button>
+                            <button 
+                              className="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-full transition-colors"
+                              onClick={() => navigate(`/movies/${item.movie?._id}`)}
+                              title="View Movie Details"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar (if available) */}
+                        {item.progress && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                              <span>Progress</span>
+                              <span>{Math.round(item.progress)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-600 rounded-full h-1">
+                              <div 
+                                className="bg-red-500 h-1 rounded-full transition-all" 
+                                style={{ width: `${item.progress || 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <svg className="mx-auto h-16 w-16 text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="text-center py-16">
+                <svg className="mx-auto h-20 w-20 text-gray-600 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                <h4 className="text-xl font-semibold text-gray-300 mb-2">No History Yet</h4>
-                <p className="text-gray-500">Start watching movies to see your history here.</p>
+                <h4 className="text-2xl font-semibold text-gray-300 mb-3">No History Yet</h4>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                  Start watching movies to see your viewing history here.
+                </p>
+                <button 
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  onClick={() => navigate('/movies')}
+                >
+                  Browse Movies
+                </button>
               </div>
             )}
           </div>
@@ -245,7 +355,10 @@ const Account = () => {
                 <p className="text-gray-500 mb-6 max-w-md mx-auto">
                   Discover amazing movies and add them to your favorites to build your personal collection.
                 </p>
-                <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                <button 
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  onClick={() => navigate('/movies')}
+                >
                   Browse Movies
                 </button>
               </div>

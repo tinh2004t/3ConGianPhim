@@ -40,15 +40,31 @@ exports.getFavorites = async (req, res) => {
 // Ghi lịch sử xem
 exports.addHistory = async (req, res) => {
   try {
-    const { movieId } = req.body;
+    const { movieId, episodeId } = req.body;
+
     const user = await User.findById(req.user.userId);
-    user.history.push({ movie: movieId });
+
+    // Kiểm tra nếu đã có lịch sử cho phim này thì cập nhật tập mới
+    const existing = user.history.find(
+      (item) => item.movie.toString() === movieId
+    );
+
+    if (existing) {
+      existing.episode = episodeId;
+      existing.updatedAt = new Date();
+    } else {
+      user.history.push({ movie: movieId, episode: episodeId });
+    }
+
     await user.save();
-    res.json({ message: 'Đã ghi lịch sử xem' });
+
+    res.json({ message: 'Đã cập nhật lịch sử xem' });
   } catch (err) {
+    console.error('Lỗi addHistory:', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
+
 
 exports.removeFavorite = async (req, res) => {
   try {
@@ -72,9 +88,13 @@ exports.removeFavorite = async (req, res) => {
 // Lấy lịch sử xem
 exports.getHistory = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).populate('history.movie');
+    const user = await User.findById(req.user.userId)
+      .populate('history.movie')
+      .populate('history.episode'); // populate thêm episode
+
     res.json(user.history);
   } catch (err) {
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
+

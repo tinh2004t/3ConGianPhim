@@ -6,10 +6,13 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Movie' }],
-  history: [{
+  history: [
+  {
     movie: { type: mongoose.Schema.Types.ObjectId, ref: 'Movie' },
-    watchedAt: { type: Date, default: Date.now }
-  }]
+    episode: { type: mongoose.Schema.Types.ObjectId, ref: 'Episode' }, // thêm trường này
+    updatedAt: { type: Date, default: Date.now }
+  }
+]
 }, {
   timestamps: true
 });

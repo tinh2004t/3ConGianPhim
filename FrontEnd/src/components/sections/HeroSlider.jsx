@@ -86,7 +86,7 @@ const SlideItem = ({ item }) => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Watch Now
+                  Xem Ngay
                 </span>
               </Link>
               <button
@@ -108,7 +108,7 @@ const SlideItem = ({ item }) => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  More Info
+                  Thêm thông tin
                 </span>
               </button>
             </div>

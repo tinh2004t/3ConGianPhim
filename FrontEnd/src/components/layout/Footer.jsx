@@ -5,17 +5,23 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const links = [
-    { title: 'Social', items: [
-      { name: 'Facebook', path: '/' },
-      { name: 'Youtube', path: '/movies' },
-      { name: 'Stripchat', path: '/tv-series' },
-      { name: 'MMlive', path: '/account' }
-    ]},
-    { title: 'Legal', items: [
-      { name: 'Terms of Service', path: '/terms' },
-      { name: 'Privacy Policy', path: '/privacy' },
-      { name: 'Cookie Policy', path: '/cookies' }
-    ]}
+    {
+      title: 'Mạng xã hội',
+      items: [
+        { name: 'Facebook', path: '/' },
+        { name: 'Youtube', path: '/' },
+        { name: 'Instagram', path: '/' },
+        {name: 'Tiktok', path: '/' },
+      ]
+    },
+    {
+      title: 'Pháp lý',
+      items: [
+        { name: 'Điều khoản dịch vụ', path: '/terms' },
+        { name: 'Chính sách bảo mật', path: '/privacy' },
+        { name: 'Chính sách cookie', path: '/cookies' }
+      ]
+    }
   ];
 
   const socialLinks = [
@@ -30,8 +36,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <h3 className="text-xl font-bold mb-4">Triple Gián</h3>
-            <p className="text-gray-400">The best streaming platform for all your favorite movies and TV shows.</p>
+            <p className="text-gray-400">
+              Triple Gián là nền tảng xem phim trực tuyến hàng đầu, nơi bạn có thể tận hưởng hàng nghìn bộ phim điện ảnh, truyền hình chất lượng cao hoàn toàn miễn phí. Trải nghiệm giải trí tuyệt vời, dễ sử dụng và không giới hạn — mọi lúc, mọi nơi!
+            </p>
           </div>
+
           {links.map((section, idx) => (
             <div key={idx}>
               <h4 className="text-lg font-semibold mb-4">{section.title}</h4>
@@ -46,8 +55,9 @@ const Footer = () => {
               </ul>
             </div>
           ))}
+
           <div>
-            <h4 className="text-lg font-semibold mb-4">Connect With Us</h4>
+            <h4 className="text-lg font-semibold mb-4">Kết nối với chúng tôi</h4>
             <div className="flex space-x-4">
               {socialLinks.map((link, idx) => (
                 <a key={idx} href={link.href} className="text-gray-400 hover:text-red-500 transition">
@@ -57,8 +67,9 @@ const Footer = () => {
             </div>
           </div>
         </div>
+
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; {currentYear} MovieFlix. All rights reserved.</p>
+          <p>&copy; {currentYear} Triple Gián. Mọi quyền được bảo lưu.</p>
         </div>
       </div>
     </footer>
