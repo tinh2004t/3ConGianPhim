@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { UserContext } from '../../contexts/UserContext';
-import movieApi from '../../api/movieApi'; // đảm bảo bạn đã tạo API này
+import movieApi from '../../api/movieApi';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -27,7 +27,6 @@ const Header = () => {
       timeoutRef.current = setTimeout(async () => {
         try {
           const res = await movieApi.searchByName(value);
-          console.log('Search API response:', res.data);
           const movies = res.data.data || [];
           setSearchResults(movies.slice(0, 4));
           setShowSuggestions(true);
@@ -40,7 +39,6 @@ const Header = () => {
       setSearchResults([]);
     }
   };
-
 
   const handleSuggestionClick = (id) => {
     navigate(`/movies/${id}`);
@@ -58,6 +56,8 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const token = localStorage.getItem('token'); // check nếu đã đăng xuất (token đã bị xóa)
 
   return (
     <header className="bg-black py-4">
@@ -90,14 +90,12 @@ const Header = () => {
             {/* Danh sách gợi ý */}
             {showSuggestions && searchResults.length > 0 && (
               <ul className="absolute top-full mt-1 w-full bg-[rgba(30,30,30,0.95)] text-white rounded-md shadow-lg z-[999] backdrop-blur-sm">
-
                 {searchResults.map((movie) => (
                   <li
                     key={movie._id}
                     onClick={() => handleSuggestionClick(movie._id)}
                     className="flex items-center p-2 hover:bg-gray-100 hover:text-black text-white cursor-pointer transition-colors"
                   >
-
                     <img src={movie.posterUrl} alt={movie.title} className="w-10 h-14 object-cover rounded mr-3" />
                     <span className="font-medium truncate">{movie.title}</span>
                   </li>
@@ -107,11 +105,11 @@ const Header = () => {
           </div>
 
           {/* Login / Logout */}
-          {user ? (
+          {user && token ? (
             <div className="inline-flex rounded-lg shadow-md overflow-hidden items-center">
               {user.role === 'admin' && (
                 <Link
-                  to="/dashboard"
+                  to="/admin/dashboard"
                   className="bg-gray-700 text-white text-sm px-4 py-1.5 hover:bg-gray-600 transition font-medium"
                 >
                   Dashboard

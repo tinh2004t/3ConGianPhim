@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+
 const throttle = (func, limit) => {
   let lastFunc;
   let lastRan;

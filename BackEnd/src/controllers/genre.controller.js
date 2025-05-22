@@ -1,55 +1,131 @@
 const Genre = require('../models/genre.model');
+const logAdminAction = require('../utils/logAdminAction');
 
-// Lấy danh sách thể loại
-exports.getGenres = async (req, res) => {
+// GET /api/genres
+exports.getAllGenres = async (req, res) => {
   try {
-    const genres = await Genre.find();
-    res.status(200).json(genres);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const genres = await Genre.find({}).sort({ name: 1 });
+    res.json({
+      success: true,
+      data: genres
+    });
+  } catch (err) {
+    console.error('Error fetching genres:', err);
+    res.status(500).json({ message: 'Lỗi khi lấy danh sách thể loại' });
   }
 };
 
-// Thêm thể loại (chỉ admin)
+// GET /api/genres/:id
+exports.getGenreById = async (req, res) => {
+  try {
+    const genre = await Genre.findById(req.params.id);
+    if (!genre) {
+      return res.status(404).json({ message: 'Không tìm thấy thể loại' });
+    }
+    res.json(genre);
+  } catch (err) {
+    console.error('Error fetching genre:', err);
+    res.status(500).json({ message: 'Lỗi khi lấy thông tin thể loại' });
+  }
+};
+
+// POST /api/genres
 exports.createGenre = async (req, res) => {
   try {
     const { name, description } = req.body;
-    const newGenre = new Genre({ name, description });
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Tên thể loại không được để trống' });
+    }
 
-    await newGenre.save();
-    res.status(201).json(newGenre);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    // Check if genre already exists
+    const existingGenre = await Genre.findOne({ name: name.trim() });
+    if (existingGenre) {
+      return res.status(400).json({ message: 'Thể loại đã tồn tại' });
+    }
+
+    const genre = new Genre({
+      name: name.trim(),
+      description: description ? description.trim() : ''
+    });
+
+    const saved = await genre.save();
+    
+    await logAdminAction(req.user.userId, `Tạo thể loại: ${saved.name}`);
+    
+    res.status(201).json({
+      success: true,
+      data: saved,
+      message: 'Tạo thể loại thành công'
+    });
+  } catch (err) {
+    console.error('Error creating genre:', err);
+    res.status(400).json({ message: err.message || 'Lỗi khi tạo thể loại' });
   }
 };
 
-// Cập nhật thể loại (chỉ admin)
+// PUT /api/genres/:id
 exports.updateGenre = async (req, res) => {
-  const { id } = req.params;
-  const { name, description } = req.body;
-
   try {
-    const genre = await Genre.findByIdAndUpdate(id, { name, description }, { new: true });
-    if (!genre) {
-      return res.status(404).json({ message: 'Genre not found' });
+    const { name, description } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Tên thể loại không được để trống' });
     }
-    res.status(200).json(genre);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    // Check if another genre with same name exists
+    const existingGenre = await Genre.findOne({ 
+      name: name.trim(), 
+      _id: { $ne: req.params.id } 
+    });
+    if (existingGenre) {
+      return res.status(400).json({ message: 'Tên thể loại đã tồn tại' });
+    }
+
+    const updated = await Genre.findByIdAndUpdate(
+      req.params.id,
+      {
+        name: name.trim(),
+        description: description ? description.trim() : ''
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Không tìm thấy thể loại' });
+    }
+
+    await logAdminAction(req.user.userId, `Cập nhật thể loại: ${updated.name}`);
+    
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Cập nhật thể loại thành công'
+    });
+  } catch (err) {
+    console.error('Error updating genre:', err);
+    res.status(400).json({ message: err.message || 'Lỗi khi cập nhật thể loại' });
   }
 };
 
-// Xóa thể loại (chỉ admin)
+// DELETE /api/genres/:id
 exports.deleteGenre = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const genre = await Genre.findByIdAndDelete(id);
+    const genre = await Genre.findById(req.params.id);
     if (!genre) {
-      return res.status(404).json({ message: 'Genre not found' });
+      return res.status(404).json({ message: 'Không tìm thấy thể loại' });
     }
-    res.status(200).json({ message: 'Genre deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    await Genre.findByIdAndDelete(req.params.id);
+    
+    await logAdminAction(req.user.userId, `Xóa thể loại: ${genre.name}`);
+    
+    res.json({
+      success: true,
+      message: 'Xóa thể loại thành công'
+    });
+  } catch (err) {
+    console.error('Error deleting genre:', err);
+    res.status(500).json({ message: 'Lỗi khi xóa thể loại' });
   }
 };

@@ -6,6 +6,7 @@ const genreRoutes = require('./routes/genre.routes');
 const episodeRoutes = require('./routes/episode.routes');
 const userRoutes = require('./routes/user.routes');
 const commentRoutes = require('./routes/comment.routes');
+const adminLogRoutes = require('./routes/adminlog.route');
 const scheduleRoutes = require('./routes/schedule.routes');
 
 const app = express();
@@ -21,6 +22,8 @@ app.use('/api', episodeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/admin-logs', adminLogRoutes);
+
 
 app.get('/', (req, res) => {
   res.send('🎬 Movie API is running!');

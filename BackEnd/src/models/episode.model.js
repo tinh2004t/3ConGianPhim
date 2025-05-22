@@ -6,12 +6,47 @@ const episodeSchema = new mongoose.Schema({
     ref: 'Movie',
     required: true
   },
-  title: { type: String, required: true },
-  episodeNumber: { type: Number, required: true },
-  videoSources: { type: Array, required: true },
-  duration: { type: String }, // vd: "23 phút"
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  episodeNumber: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  videoSources: [{
+    type: {
+      type: String,
+      enum: ['iframe', 'direct', 'hls'],
+      default: 'iframe'
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    url: {
+      type: String,
+      required: true,
+      trim: true
+    }
+  }],
+  type: {
+    type: String,
+    enum: ['TvSeries', 'Movie'],
+    default: 'TvSeries'
+  },
+  viewCount: {
+    type: Number,
+    default: 0
+  }
 }, {
-  timestamps: true
+  timestamps: true // Tự động tạo createdAt và updatedAt
 });
+
+// Index để đảm bảo không trùng episodeNumber trong cùng 1 movie
+episodeSchema.index({ movie: 1, episodeNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Episode', episodeSchema);
