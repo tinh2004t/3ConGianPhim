@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit3, Trash2, X, Search, ChevronLeft, ChevronRight, PlayCircle, Eye, Loader2 } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, ChevronLeft, ChevronRight, PlayCircle, Eye, Loader2, Filter, RotateCcw } from 'lucide-react';
 import movieApi from '../../../api/movieApi';
 import genreApi from '../../../api/genreApi';
 
@@ -18,7 +18,17 @@ const MovieManagement = () => {
   const [error, setError] = useState('');
   const [genres, setGenres] = useState([]);
   const [genresLoading, setGenresLoading] = useState(false);
-  
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    genre: '',
+    year: '',
+    type: '',
+    status: ''
+  });
+
+  const [showFilters, setShowFilters] = useState(false);
+
   const [movieForm, setMovieForm] = useState({
     title: '',
     description: '',
@@ -34,6 +44,13 @@ const MovieManagement = () => {
   const itemsPerPage = 12;
   const totalPages = Math.ceil(totalMovies / itemsPerPage);
   const token = localStorage.getItem('token');
+
+  // Generate year options (from 1950 to current year + 2)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let year = currentYear + 2; year >= 1950; year--) {
+    yearOptions.push(year);
+  }
 
   // Load genres từ API
   const loadGenres = async () => {
@@ -69,15 +86,19 @@ const MovieManagement = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const params = {
         page: currentPage,
         limit: itemsPerPage,
-        ...(searchTerm && { q: searchTerm })
+        ...(searchTerm && { q: searchTerm }),
+        ...(filters.genre && { genre: filters.genre }),
+        ...(filters.year && { year: filters.year }),
+        ...(filters.type && { type: filters.type }),
+        ...(filters.status && { status: filters.status })
       };
 
       const response = await movieApi.getAll(params);
-      
+
       if (response.data) {
         setMovies(response.data.data || response.data);
         setTotalMovies(response.data.total || response.data.totalItems || response.data.length);
@@ -111,6 +132,36 @@ const MovieManagement = () => {
     return () => clearTimeout(delayedSearch);
   }, [searchTerm]);
 
+  // Apply filters
+  useEffect(() => {
+    if (currentPage === 1) {
+      loadMovies();
+    } else {
+      setCurrentPage(1);
+    }
+  }, [filters]);
+
+  // Handle filter change
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      genre: '',
+      year: '',
+      type: '',
+      status: ''
+    });
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
+
   const handleMovieSubmit = async () => {
     try {
       setSubmitLoading(true);
@@ -134,10 +185,10 @@ const MovieManagement = () => {
         // Update movie
         const movieId = editingMovie.id || editingMovie._id;
         console.log('Updating movie:', movieId, movieData);
-        
+
         const response = await movieApi.update(movieId, movieData, token);
         console.log('Update response:', response);
-        
+
         // Reload movies to get fresh data
         await loadMovies();
       } else {
@@ -145,7 +196,7 @@ const MovieManagement = () => {
         console.log('Creating movie:', movieData);
         const response = await movieApi.create(movieData, token);
         console.log('Create response:', response);
-        
+
         // Reload movies to get updated list
         await loadMovies();
       }
@@ -168,7 +219,7 @@ const MovieManagement = () => {
   const handleEdit = (movie) => {
     console.log('Editing movie:', movie);
     setEditingMovie(movie);
-    
+
     // Handle genres - convert objects to strings if needed
     let genres = movie.genres || [];
     if (genres.length > 0 && typeof genres[0] === 'object') {
@@ -198,12 +249,12 @@ const MovieManagement = () => {
     try {
       setLoading(true);
       console.log('Deleting movie:', movieId);
-      
+
       await movieApi.delete(movieId, token);
-      
+
       // Reload movies to get fresh data
       await loadMovies();
-      
+
     } catch (error) {
       console.error('Error deleting movie:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi xóa phim';
@@ -212,12 +263,15 @@ const MovieManagement = () => {
       setLoading(false);
     }
   };
-
+  const getGenreName = (genreId) => {
+    const genre = genres.find(g => (g._id || g.name) === genreId);
+    return genre ? genre.name : genreId;
+  };
   // Navigate to episode management page
   const handleManageEpisodes = (movie) => {
     const movieId = movie.id || movie._id;
-    navigate(`/admin/movies/${movieId}/episodes`, { 
-      state: { movieTitle: movie.title } 
+    navigate(`/admin/movies/${movieId}/episodes`, {
+      state: { movieTitle: movie.title }
     });
   };
 
@@ -260,7 +314,7 @@ const MovieManagement = () => {
       {error && (
         <div className="bg-red-600 border border-red-500 rounded-lg p-4">
           <p className="text-white">{error}</p>
-          <button 
+          <button
             onClick={() => setError('')}
             className="mt-2 text-red-200 hover:text-white text-sm underline"
           >
@@ -283,6 +337,154 @@ const MovieManagement = () => {
         </div>
       </div>
 
+      {/* Filter Section */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <Filter className="w-5 h-5 text-gray-400" />
+            <span className="text-white font-medium">Bộ lọc</span>
+            {hasActiveFilters && (
+              <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                {Object.values(filters).filter(f => f !== '').length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-gray-400 hover:text-white text-sm flex items-center space-x-1"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Xóa bộ lọc</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-gray-400 hover:text-white"
+            >
+              {showFilters ? 'Thu gọn' : 'Mở rộng'}
+            </button>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Genre Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Thể loại</label>
+              <select
+                value={filters.genre}
+                onChange={(e) => handleFilterChange('genre', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="">Tất cả thể loại</option>
+                {genres.map((genre) => (
+                  <option key={genre._id || genre.name} value={genre._id || genre.name}>
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Year Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Năm phát hành</label>
+              <select
+                value={filters.year}
+                onChange={(e) => handleFilterChange('year', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="">Tất cả năm</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Loại phim</label>
+              <select
+                value={filters.type}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="">Tất cả loại</option>
+                <option value="Movies">Movies</option>
+                <option value="TvSeries">TV Series</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Trạng thái</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="ongoing">Đang chiếu</option>
+                <option value="completed">Đã hoàn thành</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {filters.genre && (
+              <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full flex items-center space-x-1">
+                <span>Thể loại:{getGenreName(filters.genre)}</span>
+                <button
+                  onClick={() => handleFilterChange('genre', '')}
+                  className="hover:bg-red-700 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.year && (
+              <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full flex items-center space-x-1">
+                <span>Năm: {filters.year}</span>
+                <button
+                  onClick={() => handleFilterChange('year', '')}
+                  className="hover:bg-blue-700 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.type && (
+              <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full flex items-center space-x-1">
+                <span>Loại: {filters.type}</span>
+                <button
+                  onClick={() => handleFilterChange('type', '')}
+                  className="hover:bg-green-700 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.status && (
+              <span className="bg-yellow-600 text-white text-xs px-3 py-1 rounded-full flex items-center space-x-1">
+                <span>Trạng thái: {filters.status === 'ongoing' ? 'Đang chiếu' : 'Đã hoàn thành'}</span>
+                <button
+                  onClick={() => handleFilterChange('status', '')}
+                  className="hover:bg-yellow-700 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Loading */}
       {loading && (
         <div className="flex justify-center items-center py-8">
@@ -298,8 +500,8 @@ const MovieManagement = () => {
             const movieId = movie.id || movie._id;
             return (
               <div key={movieId} className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-                <img 
-                  src={movie.posterUrl || '/api/placeholder/200/300'} 
+                <img
+                  src={movie.posterUrl || '/api/placeholder/200/300'}
                   alt={movie.title}
                   className="w-full h-64 object-cover cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => handleManageEpisodes(movie)}
@@ -308,7 +510,7 @@ const MovieManagement = () => {
                   }}
                 />
                 <div className="p-4">
-                  <h3 
+                  <h3
                     className="text-white font-bold text-lg mb-2 truncate cursor-pointer hover:text-red-400 transition-colors"
                     onClick={() => handleManageEpisodes(movie)}
                   >
@@ -323,8 +525,8 @@ const MovieManagement = () => {
                   </div>
                   <div className="flex flex-wrap gap-1 mb-3">
                     {(movie.genres || []).slice(0, 2).map((genre, index) => (
-                      <span 
-                        key={`${movieId}-genre-${index}-${typeof genre === 'object' ? genre.name : genre}`} 
+                      <span
+                        key={`${movieId}-genre-${index}-${typeof genre === 'object' ? genre.name : genre}`}
                         className="bg-red-600 text-white text-xs px-2 py-1 rounded"
                       >
                         {typeof genre === 'object' ? genre.name : genre}
@@ -335,9 +537,8 @@ const MovieManagement = () => {
                     )}
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      movie.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
-                    }`}>
+                    <span className={`text-xs px-2 py-1 rounded ${movie.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
+                      }`}>
                       {movie.status === 'completed' ? 'Hoàn thành' : 'Đang chiếu'}
                     </span>
                     <div className="flex space-x-1">
@@ -375,8 +576,16 @@ const MovieManagement = () => {
       {!loading && movies.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-400">
-            {searchTerm ? 'Không tìm thấy phim nào phù hợp' : 'Chưa có phim nào'}
+            {searchTerm || hasActiveFilters ? 'Không tìm thấy phim nào phù hợp' : 'Chưa có phim nào'}
           </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="mt-2 text-red-400 hover:text-red-300 text-sm underline"
+            >
+              Xóa bộ lọc và hiển thị tất cả
+            </button>
+          )}
         </div>
       )}
 
@@ -423,7 +632,7 @@ const MovieManagement = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -439,7 +648,7 @@ const MovieManagement = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Năm ra mắt</label>
                   <input
@@ -476,7 +685,7 @@ const MovieManagement = () => {
                     placeholder="https://example.com/poster.jpg"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Trailer URL</label>
                   <input
@@ -531,7 +740,7 @@ const MovieManagement = () => {
                     <option value="completed">Đã hoàn thành</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Đất nước</label>
                   <input
@@ -542,7 +751,7 @@ const MovieManagement = () => {
                     placeholder="USA"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Loại phim</label>
                   <select
@@ -555,7 +764,7 @@ const MovieManagement = () => {
                   </select>
                 </div>
               </div>
-              
+
               <div className="flex space-x-3 pt-4">
                 <button
                   onClick={handleMovieSubmit}

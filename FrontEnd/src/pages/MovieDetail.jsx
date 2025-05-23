@@ -45,26 +45,26 @@ const MovieDetail = () => {
 
 
   const handleAddToFavorites = async () => {
-  const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
 
-  if (!token) {
-    alert('Vui lòng đăng nhập để thêm vào yêu thích!');
-    return navigate('/login');
-  }
+    if (!token) {
+      alert('Vui lòng đăng nhập để thêm vào yêu thích!');
+      return navigate('/login');
+    }
 
-  if (!movieData?._id) {
-    alert('Lỗi: Không xác định được phim!');
-    return;
-  }
+    if (!movieData?._id) {
+      alert('Lỗi: Không xác định được phim!');
+      return;
+    }
 
-  try {
-    await userApi.addFavorite(movieData._id, token);
-    alert('Đã thêm vào danh sách yêu thích!');
-  } catch (error) {
-    console.error('Lỗi khi thêm vào yêu thích:', error.response?.data || error.message);
-    alert(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
-  }
-};
+    try {
+      await userApi.addFavorite(movieData._id, token);
+      alert('Đã thêm vào danh sách yêu thích!');
+    } catch (error) {
+      console.error('Lỗi khi thêm vào yêu thích:', error.response?.data || error.message);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
+    }
+  };
 
   const tabs = [
     { id: 'episodes', label: 'Danh sách tập' },
@@ -157,29 +157,43 @@ const MovieDetail = () => {
           </div>
 
           <button
-          onClick={handleAddToFavorites}
-          className="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition flex items-center gap-2"
-        >
-          <span>Yêu Thích</span>
-          <span>❤️</span>
-        </button>
+            onClick={handleAddToFavorites}
+            className="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition flex items-center gap-2"
+          >
+            <span>Yêu Thích</span>
+            <span>❤️</span>
+          </button>
         </div>
 
 
         <div className="p-4">
           {activeTab === 'episodes' && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {episodes.map((ep) => (
-                <a
-                  key={ep._id}
-                  href={`/watch/${movieData._id}/episodes/${ep._id}`}
-                  className="bg-gray-800 hover:bg-gray-700 text-center py-3 rounded text-white"
-                >
-                  {ep.episodeNumber || `Tập ${ep.number}`}
-                </a>
-              ))}
+            <div>
+              {episodes.length === 0 ? (
+                <div>
+                <p className="text-gray-300">Tập phim đang được chúng mình cập nhật, bạn hãy quay lại sau nhé❤️🫶</p>
+                <p className="text-gray-300">Hãy thêm phim vào yêu thích❤️ để nhận được thông báo khi có tập mới🫶</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {episodes.map((ep) => (
+                    <a
+                      key={ep._id}
+                      href={`/watch/${movieData._id}/episodes/${ep._id}`}
+                      className="bg-gray-800 hover:bg-gray-700 text-center py-3 rounded text-white"
+                    >
+                      {ep.episodeNumber || `Tập ${ep.number}`}
+                      
+                    </a>
+                    
+                  ))}
+                  
+                </div>
+                
+              )}
             </div>
           )}
+
 
           {activeTab === 'synopsis' && (
             <div className="text-gray-300">
@@ -187,7 +201,7 @@ const MovieDetail = () => {
             </div>
           )}
 
-          
+
         </div>
       </div>
     </div>

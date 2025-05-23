@@ -4,8 +4,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/movies': 'http://localhost:5000'
-    }
+    port: 3000, // hoặc port bạn muốn
+    historyApiFallback: true, // Quan trọng: cho phép client-side routing
+  },
+  preview: {
+    port: 4173,
+    historyApiFallback: true, // Cũng cần cho preview mode
   }
 })
