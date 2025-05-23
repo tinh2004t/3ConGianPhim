@@ -10,7 +10,6 @@ const AdminSidebar = ({ currentPage, collapsed, onToggle }) => {
     { id: 'movies', label: 'Movies', icon: Film, to: '/admin/movies' },
     { id: 'genres', label: 'Genres', icon: Tag, to: '/admin/genres' },
     { id: 'users', label: 'Users', icon: Users, to: '/admin/users' },
-    { id: 'reports', label: 'Reports', icon: FileText, to: '/admin/reports' },
   ];
 
   return (

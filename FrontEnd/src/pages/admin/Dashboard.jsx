@@ -56,7 +56,6 @@ const Dashboard = () => {
         <StatCard label="Tổng số phim" value={stats.totalMovies} Icon={Film} color="text-red-500" />
         <StatCard label="Tổng người dùng" value={stats.totalUsers} Icon={Users} color="text-blue-500" />
         <StatCard label="Tổng lượt xem" value={stats.totalViews} Icon={Eye} color="text-green-500" />
-        <StatCard label="Người dùng đang hoạt động" value={stats.activeUsers} Icon={Activity} color="text-yellow-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -70,8 +69,8 @@ const Dashboard = () => {
               className="space-y-3 overflow-y-auto"
               style={{ maxHeight: '300px' }}
             >
-              {recentLogs.map((log) => (
-                <div key={log.id} className="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg">
+              {recentLogs.map((log, index) => (
+                <div key={log.id || `${log.adminId._id}-${index}`} className="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg">
                   <Activity className="w-5 h-5 text-blue-500 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-white text-sm">
@@ -95,7 +94,7 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-3">
               {topMovies.map((movie, index) => (
-                <div key={movie._id} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
+                <div key={movie._id || `${movie.title}-${index}`} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
                   <span className="text-2xl font-bold text-gray-400 w-8">#{index + 1}</span>
                   <img
                     src={movie.posterUrl || '/api/placeholder/60/90'}
@@ -113,7 +112,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      
+
     </div>
   );
 };

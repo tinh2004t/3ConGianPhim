@@ -31,7 +31,7 @@ const MovieManagement = () => {
     type: 'Movies'
   });
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
   const totalPages = Math.ceil(totalMovies / itemsPerPage);
   const token = localStorage.getItem('token');
 

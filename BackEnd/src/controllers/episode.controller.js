@@ -1,49 +1,93 @@
 const Episode = require('../models/episode.model');
+const Notification = require('../models/notification.model');
+const User = require('../models/user.model');
 const logAdminAction = require('../utils/logAdminAction');
 
 // POST - Thêm tập phim (admin)
 exports.createEpisode = async (req, res) => {
   try {
     const { title, episodeNumber, videoSources } = req.body;
-    
-    // Validate required fields
-    if (!title || !episodeNumber || !videoSources || videoSources.length === 0) {
+    const movieId = req.params.movieId;
+
+    console.log('=== CREATE EPISODE START ===');
+    console.log('Movie ID:', movieId);
+    console.log('User ID:', req.user?.userId);
+
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: 'Không xác định được người dùng' });
+    }
+
+    if (!title || !episodeNumber || !Array.isArray(videoSources) || videoSources.length === 0) {
       return res.status(400).json({ 
         message: 'Thiếu thông tin bắt buộc: title, episodeNumber, videoSources' 
       });
     }
 
-    // Validate episodeNumber is unique for this movie
+    // Check if episode already exists
     const existingEpisode = await Episode.findOne({ 
-      movie: req.params.movieId, 
-      episodeNumber: episodeNumber 
+      movie: movieId, 
+      episodeNumber 
     });
-    
+
     if (existingEpisode) {
       return res.status(400).json({ 
         message: `Tập ${episodeNumber} đã tồn tại cho phim này` 
       });
     }
 
+    // Create episode
     const episode = new Episode({
-      movie: req.params.movieId,
+      movie: movieId,
       title,
       episodeNumber,
       videoSources,
-      type: 'TvSeries' // Set default type
+      type: 'TvSeries'
     });
 
-        await logAdminAction(req.user.userId, `Tạo tập phim: ${episode.title}`);
-    
-
     await episode.save();
-    
+    console.log('✅ Episode created:', episode._id);
 
-    // await logAdminAction(req.user.userId, `Tạo tập phim: ${episode.title}`);
-    
+    // Log admin action
+    await logAdminAction(req.user.userId, `Tạo tập phim: ${episode.title}`);
+
+    // Create notifications for users who favorited this movie
+    try {
+      console.log('=== CREATING NOTIFICATIONS ===');
+      
+      // Find users who have this movie in favorites
+      const usersWithFavorite = await User.find({ 
+        favorites: movieId 
+      }).select('_id');
+
+      console.log(`Found ${usersWithFavorite.length} users with movie in favorites`);
+
+      if (usersWithFavorite.length > 0) {
+        // Prepare notification data
+        const notificationData = usersWithFavorite.map(user => ({
+          user: user._id,
+          movie: movieId,
+          episode: episode._id,
+          title: 'Tập phim mới',
+          message: `Phim bạn yêu thích đã có tập mới: "${episode.title}"`,
+          isRead: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }));
+
+        // Insert notifications in batch
+        const insertedNotifications = await Notification.insertMany(notificationData);
+        console.log(`✅ Created ${insertedNotifications.length} notifications`);
+      }
+    } catch (notificationError) {
+      console.error('❌ Error creating notifications:', notificationError);
+      // Don't fail the episode creation if notification fails
+    }
+
+    console.log('=== CREATE EPISODE END ===');
     res.status(201).json(episode);
+    
   } catch (err) {
-    console.error('Create episode error:', err);
+    console.error('❌ Error creating episode:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -94,8 +138,6 @@ exports.updateEpisode = async (req, res) => {
       { new: true }
     );
 
-    // Log admin action (optional - comment out if logAdminAction doesn't exist)
-    // await logAdminAction(req.user.userId, `Cập nhật tập phim: ${episode.title}`);
     await logAdminAction(req.user.userId, `Cập nhật tập phim: ${episode.title}`);
     
     res.status(200).json(episode);
@@ -113,8 +155,9 @@ exports.deleteEpisode = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy tập phim' });
     }
     
-    // Log admin action (optional - comment out if logAdminAction doesn't exist)
-    // await logAdminAction(req.user.userId, `Xóa tập phim: ${episode.title}`);
+    // Also delete related notifications
+    await Notification.deleteMany({ episode: req.params.id });
+    
     await logAdminAction(req.user.userId, `Xóa tập phim: ${episode.title}`);
     res.status(200).json({ message: 'Xóa tập phim thành công' });
   } catch (err) {

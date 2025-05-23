@@ -7,7 +7,7 @@ const episodeRoutes = require('./routes/episode.routes');
 const userRoutes = require('./routes/user.routes');
 const commentRoutes = require('./routes/comment.routes');
 const adminLogRoutes = require('./routes/adminlog.route');
-const scheduleRoutes = require('./routes/schedule.routes');
+const notificationRoute = require('./routes/notification.route');
 
 const app = express();
 
@@ -21,8 +21,8 @@ app.use('/api/genres', genreRoutes);
 app.use('/api', episodeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/comments', commentRoutes);
-app.use('/api/schedule', scheduleRoutes);
 app.use('/api/admin-logs', adminLogRoutes);
+app.use('/api/notifications', notificationRoute);
 
 
 app.get('/', (req, res) => {
