@@ -1,7 +1,9 @@
 const Episode = require('../models/episode.model');
+const Movie = require('../models/movie.model');
 const Notification = require('../models/notification.model');
 const User = require('../models/user.model');
 const logAdminAction = require('../utils/logAdminAction');
+const mongoose = require('mongoose');
 
 // POST - Thêm tập phim (admin)
 exports.createEpisode = async (req, res) => {
@@ -178,13 +180,15 @@ exports.getEpisodesByMovie = async (req, res) => {
   }
 };
 
-// GET - 1 tập phim cụ thể
+// GET - 1 tập phim cụ thể (TĂNG VIEW COUNT KHI XEM TẬP)
 exports.getEpisodeById = async (req, res) => {
   try {
     const episode = await Episode.findById(req.params.id);
     if (!episode) {
       return res.status(404).json({ message: 'Không tìm thấy tập phim' });
     }
+
+    // Đã loại bỏ phần tăng viewCount - chỉ trả về dữ liệu
     res.status(200).json(episode);
   } catch (err) {
     console.error('Get episode error:', err);
@@ -192,11 +196,16 @@ exports.getEpisodeById = async (req, res) => {
   }
 };
 
-// GET - Tập phim theo movieId và episodeId
+// GET - Tập phim theo movieId và episodeId (TĂNG VIEW COUNT KHI XEM TẬP)
 exports.getEpisodeByMovieAndEpisodeId = async (req, res) => {
   const { movieId, episodeId } = req.params;
 
   try {
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(movieId) || !mongoose.Types.ObjectId.isValid(episodeId)) {
+      return res.status(400).json({ message: 'ID không hợp lệ' });
+    }
+
     const episode = await Episode.findOne({ 
       _id: episodeId, 
       movie: movieId 
@@ -208,9 +217,64 @@ exports.getEpisodeByMovieAndEpisodeId = async (req, res) => {
       });
     }
 
+    // Đã loại bỏ phần tăng viewCount - chỉ trả về dữ liệu
     res.status(200).json(episode);
   } catch (err) {
     console.error('Get episode by movie and episode ID error:', err);
     res.status(500).json({ message: err.message });
+  }
+};
+
+// POST - Tăng view count khi bắt đầu xem tập (alternative approach)
+exports.watchEpisode = async (req, res) => {
+  try {
+    const { movieId, episodeId } = req.params;
+    
+    console.log(`🎬 watchEpisode called - movieId: ${movieId}, episodeId: ${episodeId}`);
+
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(movieId) || !mongoose.Types.ObjectId.isValid(episodeId)) {
+      return res.status(400).json({ message: 'ID không hợp lệ' });
+    }
+
+    // Verify episode exists and belongs to movie
+    const episode = await Episode.findOne({ 
+      _id: episodeId, 
+      movie: movieId 
+    });
+
+    if (!episode) {
+      return res.status(404).json({ 
+        message: 'Không tìm thấy tập phim thuộc phim này' 
+      });
+    }
+
+    // Increment movie view count
+    const updatedMovie = await Movie.findByIdAndUpdate(
+      movieId,
+      { $inc: { viewCount: 1 } },
+      { new: true }
+    ).populate('genres');
+
+    if (!updatedMovie) {
+      return res.status(404).json({ message: 'Không tìm thấy phim' });
+    }
+
+    console.log(`✅ View count increased! Movie: ${updatedMovie.title}, New count: ${updatedMovie.viewCount}`);
+
+    res.json({
+      success: true,
+      message: 'Bắt đầu xem tập phim',
+      episode: episode,
+      movie: {
+        _id: updatedMovie._id,
+        title: updatedMovie.title,
+        viewCount: updatedMovie.viewCount
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Error in watchEpisode:', err);
+    res.status(500).json({ message: 'Lỗi khi ghi nhận lượt xem' });
   }
 };

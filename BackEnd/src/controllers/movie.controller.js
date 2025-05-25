@@ -379,29 +379,3 @@ exports.getTopViewByType = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
-
-// PUT /api/movies/:movieId/increment-view
-exports.incrementViewCount = async (req, res) => {
-  try {
-    const { movieId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(movieId)) {
-      return res.status(400).json({ message: "ID không hợp lệ" });
-    }
-
-    const movie = await Movie.findByIdAndUpdate(
-      movieId,
-      { $inc: { viewCount: 1 } },
-      { new: true }
-    ).populate("genres");
-
-    if (!movie) {
-      return res.status(404).json({ message: "Không tìm thấy phim" });
-    }
-
-    res.json(movie);
-  } catch (err) {
-    console.error("Error incrementing view count:", err);
-    res.status(500).json({ message: "Lỗi khi tăng lượt xem" });
-  }
-};

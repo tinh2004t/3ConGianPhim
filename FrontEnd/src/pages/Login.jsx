@@ -36,12 +36,12 @@ const Login = () => {
         onSubmit={handleSubmit}
         className="max-w-[400px] w-full mx-4 rounded-lg bg-gray-900 p-8"
       >
-        <h2 className="text-4xl text-white font-bold text-center mb-6">SIGN&nbsp;IN</h2>
+        <h2 className="text-4xl text-white font-bold text-center mb-6">ĐĂNG&nbsp;NHẬP</h2>
 
         {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
 
         <label className="flex flex-col text-gray-400 py-2">
-          Username
+          Tên đăng nhập
           <input
             name="username"
             value={form.username}
@@ -52,7 +52,7 @@ const Login = () => {
         </label>
 
         <label className="flex flex-col text-gray-400 py-2">
-          Password
+          Mật khẩu
           <input
             name="password"
             type="password"
@@ -65,22 +65,22 @@ const Login = () => {
 
         <div className="flex justify-between text-gray-400 py-2 text-sm">
           <label className="flex items-center">
-            <input type="checkbox" className="mr-2" /> Remember&nbsp;Me
+            <input type="checkbox" className="mr-2" /> Nhớ&nbsp;mật khẩu
           </label>
-          <span className="cursor-pointer hover:text-white">Forgot&nbsp;Password?</span>
+          <span className="cursor-pointer hover:text-white">Quên&nbsp;mật khẩu?</span>
         </div>
 
         <button
           type="submit"
           className="w-full my-5 py-2 bg-teal-500 text-white font-semibold rounded-lg"
         >
-          SIGN&nbsp;IN
+          Đăng&nbsp;nhập
         </button>
 
         <p className="text-sm text-gray-400 text-center">
-          Don't have an account?&nbsp;
+          Bạn chưa có tài khoản?&nbsp;
           <Link to="/register" className="text-teal-400 hover:underline">
-            Register
+            Đăng ký
           </Link>
         </p>
       </form>

@@ -51,6 +51,26 @@ const Navbar = () => {
     checkAuthStatus();
   }, []);
 
+  // Listen for login/logout events
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' || e.key === 'authToken') {
+        checkAuthStatus();
+      }
+    };
+
+    // Listen for localStorage changes from other tabs
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also check periodically in case of programmatic changes
+    const interval = setInterval(checkAuthStatus, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <nav
       className={`w-full z-50 transition-all duration-300 ease-in-out
@@ -96,7 +116,7 @@ const Navbar = () => {
           {/* Notification Bell - Only show when logged in */}
           {isLoggedIn && (
             <div className="flex items-center py-5">
-              <NotificationBell />
+              <NotificationBell isLoggedIn={isLoggedIn} />
             </div>
           )}
         </div>

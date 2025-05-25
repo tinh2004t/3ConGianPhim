@@ -9,6 +9,8 @@ router.get('/movies/:movieId/episodes', episodeController.getEpisodesByMovie);
 // Lấy 1 tập cụ thể (public)
 router.get('/episodes/:id', episodeController.getEpisodeById);
 
+router.post('/movies/:movieId/episodes/:episodeId/watch', episodeController.watchEpisode);
+
 // Lấy tập theo movieId và episodeId (public)
 router.get('/movies/:movieId/episodes/:episodeId', episodeController.getEpisodeByMovieAndEpisodeId);
 

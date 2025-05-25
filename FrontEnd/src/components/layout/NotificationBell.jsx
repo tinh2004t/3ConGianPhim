@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import notificationApi from '../../api/notificatonApi';
 
-const NotificationBell = () => {
+const NotificationBell = ({ isLoggedIn: propIsLoggedIn }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -21,6 +21,9 @@ const NotificationBell = () => {
     setIsLoggedIn(loggedIn);
     return loggedIn;
   };
+
+  // Use prop if available, otherwise use internal state
+  const effectiveIsLoggedIn = propIsLoggedIn !== undefined ? propIsLoggedIn : isLoggedIn;
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -188,7 +191,7 @@ const NotificationBell = () => {
 
   // Handle bell click
   const handleBellClick = async () => {
-    if (!checkAuthStatus()) {
+    if (!effectiveIsLoggedIn) {
       console.log('User not logged in');
       return;
     }
@@ -234,26 +237,28 @@ const NotificationBell = () => {
     }
   };
 
-  // Check auth status on mount
+  // Check auth status on mount (fallback if no prop provided)
   useEffect(() => {
-    checkAuthStatus();
-  }, []);
+    if (propIsLoggedIn === undefined) {
+      checkAuthStatus();
+    }
+  }, [propIsLoggedIn]);
 
   // Fetch notifications when logged in (for initial load and periodic refresh)
   useEffect(() => {
-    if (isLoggedIn) {
+    if (effectiveIsLoggedIn) {
       fetchNotifications();
       
       // Set up periodic refresh every 30 seconds (only when dropdown is closed)
       const interval = setInterval(() => {
-        if (isLoggedIn && !isOpen) {
+        if (effectiveIsLoggedIn && !isOpen) {
           fetchNotifications();
         }
       }, 30000);
 
       return () => clearInterval(interval);
     }
-  }, [isLoggedIn, isOpen]);
+  }, [effectiveIsLoggedIn, isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -273,7 +278,7 @@ const NotificationBell = () => {
   }, [isOpen]);
 
   // Don't render if user is not logged in
-  if (!isLoggedIn) {
+  if (!effectiveIsLoggedIn) {
     return null;
   }
 
