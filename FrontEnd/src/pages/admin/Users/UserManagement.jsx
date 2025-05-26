@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../../components/layout/admin/AdminLayout';
-import { Edit3, Search, ChevronLeft, ChevronRight, X, User, Mail, Shield, Trash2, AlertTriangle } from 'lucide-react';
+import { Edit3, Search, ChevronLeft, ChevronRight, X, User, Mail, Shield, Trash2, AlertTriangle, MoreVertical } from 'lucide-react';
 import userApi from '../../../api/userApi';
 
 const Users = () => {
@@ -13,6 +13,7 @@ const Users = () => {
   const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   
   const [userFormData, setUserFormData] = useState({
     username: '',
@@ -30,6 +31,18 @@ const Users = () => {
   // Load users khi component mount
   useEffect(() => {
     loadUsers();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const loadUsers = async () => {
@@ -103,11 +116,13 @@ const Users = () => {
     });
     setShowEditForm(true);
     setError('');
+    setActiveDropdown(null);
   };
 
   const handleDeleteClick = (user) => {
     setUserToDelete(user);
     setShowDeleteConfirm(true);
+    setActiveDropdown(null);
   };
 
   const handleDeleteConfirm = async () => {
@@ -145,6 +160,10 @@ const Users = () => {
     setError('');
   };
 
+  const toggleDropdown = (userId) => {
+    setActiveDropdown(activeDropdown === userId ? null : userId);
+  };
+
   const getRoleColor = (role) => {
     switch (role) {
       case 'admin':
@@ -177,35 +196,36 @@ const Users = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-white">Quản lý người dùng</h2>
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-2xl lg:text-3xl font-bold text-white">Quản lý người dùng</h2>
       </div>
 
       {/* Error/Success Messages */}
       {error && (
-        <div className="bg-red-600 text-white p-4 rounded-lg flex items-center">
-          <AlertTriangle className="w-5 h-5 mr-2" />
-          {error}
+        <div className="bg-red-600 text-white p-3 lg:p-4 rounded-lg flex items-start">
+          <AlertTriangle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+          <span className="text-sm lg:text-base">{error}</span>
         </div>
       )}
       
       {success && (
-        <div className="bg-green-600 text-white p-4 rounded-lg">
-          {success}
+        <div className="bg-green-600 text-white p-3 lg:p-4 rounded-lg">
+          <span className="text-sm lg:text-base">{success}</span>
         </div>
       )}
 
       {/* Search */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 lg:p-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 lg:w-5 lg:h-5" />
           <input
             type="text"
             placeholder="Tìm kiếm người dùng..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            className="w-full pl-8 lg:pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm lg:text-base"
           />
         </div>
       </div>
@@ -213,13 +233,13 @@ const Users = () => {
       {/* Loading Indicator */}
       {loading && (
         <div className="text-center py-4">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          <p className="text-gray-400 mt-2">Đang tải...</p>
+          <div className="inline-block animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-white"></div>
+          <p className="text-gray-400 mt-2 text-sm lg:text-base">Đang tải...</p>
         </div>
       )}
 
-      {/* Users Table */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden lg:block bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-700">
@@ -314,26 +334,110 @@ const Users = () => {
         </div>
       </div>
 
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-3">
+        {currentUsers.length === 0 ? (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+            <p className="text-gray-400">
+              {loading ? 'Đang tải...' : 'Không tìm thấy người dùng nào'}
+            </p>
+          </div>
+        ) : (
+          currentUsers.map((user) => (
+            <div key={user._id} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 h-10 w-10">
+                    <div className="h-10 w-10 rounded-full bg-gray-600 flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-300" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium truncate">{user.username}</h3>
+                    <div className="flex items-center mt-1">
+                      <Mail className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                      <p className="text-sm text-gray-300 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Mobile Actions Dropdown */}
+                <div className="relative dropdown-container">
+                  <button
+                    onClick={() => toggleDropdown(user._id)}
+                    className="p-2 text-gray-400 hover:text-white"
+                    disabled={loading}
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                  
+                  {activeDropdown === user._id && (
+                    <div className="absolute right-0 mt-2 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-50">
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleEdit(user)}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 flex items-center"
+                          disabled={loading}
+                        >
+                          <Edit3 className="w-4 h-4 mr-2" />
+                          Chỉnh sửa
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(user)}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600 flex items-center"
+                          disabled={loading}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                  <Shield className="h-3 w-3 mr-1" />
+                  {getRoleDisplayName(user.role)}
+                </span>
+              </div>
+              
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-400">
+                <div>
+                  <span className="block">Ngày tạo:</span>
+                  <span className="text-gray-300">{formatDate(user.createdAt)}</span>
+                </div>
+                <div>
+                  <span className="block">Cập nhật:</span>
+                  <span className="text-gray-300">{formatDate(user.updatedAt)}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Pagination */}
-      <div className="flex justify-between items-center">
-        <div className="text-gray-400">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="text-gray-400 text-sm lg:text-base text-center sm:text-left">
           Hiển thị {filteredUsers.length === 0 ? 0 : startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredUsers.length)} của {filteredUsers.length} người dùng
         </div>
-        <div className="flex space-x-2">
+        <div className="flex justify-center sm:justify-end space-x-2">
           <button
             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
             disabled={currentPage === 1 || loading}
-            className="px-3 py-2 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+            className="px-3 py-2 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 text-sm lg:text-base"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 py-2 bg-gray-700 text-white rounded">
+          <span className="px-3 py-2 bg-gray-700 text-white rounded text-sm lg:text-base">
             {totalPages === 0 ? 0 : currentPage} / {totalPages}
           </span>
           <button
             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages || totalPages === 0 || loading}
-            className="px-3 py-2 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600"
+            className="px-3 py-2 bg-gray-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 text-sm lg:text-base"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -343,17 +447,17 @@ const Users = () => {
       {/* Edit User Form Modal */}
       {showEditForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-gray-800 rounded-lg p-4 lg:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">
+              <h3 className="text-lg lg:text-xl font-bold text-white">
                 Chỉnh sửa người dùng
               </h3>
               <button
                 onClick={closeAllForms}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white p-1"
                 disabled={loading}
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 lg:w-6 lg:h-6" />
               </button>
             </div>
             
@@ -364,7 +468,7 @@ const Users = () => {
                   type="text"
                   value={userFormData.username}
                   onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm lg:text-base"
                   placeholder="Nhập tên người dùng"
                   disabled={loading}
                 />
@@ -376,7 +480,7 @@ const Users = () => {
                   type="email"
                   value={userFormData.email}
                   onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm lg:text-base"
                   placeholder="Nhập email"
                   disabled={loading}
                 />
@@ -387,7 +491,7 @@ const Users = () => {
                 <select
                   value={userFormData.role}
                   onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm lg:text-base"
                   disabled={loading}
                 >
                   <option value="user">Người dùng</option>
@@ -396,18 +500,18 @@ const Users = () => {
                 </select>
               </div>
               
-              <div className="flex space-x-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button
                   onClick={handleUserSubmit}
                   disabled={loading}
-                  className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
                 >
                   {loading ? 'Đang cập nhật...' : 'Cập nhật'}
                 </button>
                 <button
                   onClick={closeAllForms}
                   disabled={loading}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
                 >
                   Hủy
                 </button>
@@ -420,48 +524,48 @@ const Users = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && userToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-gray-800 rounded-lg p-4 lg:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">
+              <h3 className="text-lg lg:text-xl font-bold text-white">
                 Xác nhận xóa
               </h3>
               <button
                 onClick={closeAllForms}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white p-1"
                 disabled={loading}
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 lg:w-6 lg:h-6" />
               </button>
             </div>
             
             <div className="mb-6">
-              <div className="flex items-center mb-4">
-                <AlertTriangle className="w-12 h-12 text-red-500 mr-4" />
+              <div className="flex items-start mb-4">
+                <AlertTriangle className="w-8 h-8 lg:w-12 lg:h-12 text-red-500 mr-3 lg:mr-4 flex-shrink-0" />
                 <div>
-                  <p className="text-white font-medium">Bạn có chắc chắn muốn xóa người dùng này?</p>
-                  <p className="text-gray-400 text-sm">Hành động này không thể hoàn tác.</p>
+                  <p className="text-white font-medium text-sm lg:text-base">Bạn có chắc chắn muốn xóa người dùng này?</p>
+                  <p className="text-gray-400 text-xs lg:text-sm">Hành động này không thể hoàn tác.</p>
                 </div>
               </div>
               
               <div className="bg-gray-700 p-3 rounded-lg">
-                <p className="text-white"><strong>Tên:</strong> {userToDelete.username}</p>
-                <p className="text-gray-300"><strong>Email:</strong> {userToDelete.email}</p>
-                <p className="text-gray-300"><strong>Vai trò:</strong> {getRoleDisplayName(userToDelete.role)}</p>
+                <p className="text-white text-sm lg:text-base"><strong>Tên:</strong> {userToDelete.username}</p>
+                <p className="text-gray-300 text-sm lg:text-base"><strong>Email:</strong> {userToDelete.email}</p>
+                <p className="text-gray-300 text-sm lg:text-base"><strong>Vai trò:</strong> {getRoleDisplayName(userToDelete.role)}</p>
               </div>
             </div>
             
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleDeleteConfirm}
                 disabled={loading}
-                className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
               >
                 {loading ? 'Đang xóa...' : 'Xóa'}
               </button>
               <button
                 onClick={closeAllForms}
                 disabled={loading}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
               >
                 Hủy
               </button>
