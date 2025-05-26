@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5000/api', // Thay đổi theo địa chỉ backend của bạn
+  baseURL: 'https://threecongianphim.onrender.com/api', // Thay đổi theo địa chỉ backend của bạn
   headers: {
     'Content-Type': 'application/json',
   },
