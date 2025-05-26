@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000, // hoặc port bạn muốn
+    port: 5000, // hoặc port bạn muốn
     historyApiFallback: true, // Quan trọng: cho phép client-side routing
   },
   preview: {
