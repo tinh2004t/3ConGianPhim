@@ -62,7 +62,7 @@ export default function Register() {
       });
       navigate('/login');
     } catch (err) {
-      let errorMessage = ['Đăng ký thất bại'];
+      let errorMessage = ['Đăng ký không thành công'];
 
       if (err.response?.data?.errors) {
         errorMessage = Object.values(err.response.data.errors).map(e => e.message);
