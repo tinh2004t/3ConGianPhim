@@ -2,7 +2,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { loginUser } from '../api/authApi';
+import authApi from '../api/authApi';
 import { UserContext } from '../contexts/UserContext';
 
 const Login = () => {
@@ -19,7 +19,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res       = await loginUser(form);   // gọi API
+      const res       = await authApi.loginUser(form);   // gọi API
       const userData = jwtDecode(res.token);    // giải mã token
 
       login(userData, res.token);                // đưa vào Context + localStorage

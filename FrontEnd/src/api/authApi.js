@@ -1,21 +1,24 @@
-import axios from 'axios';
+// src/api/authApi.js
+import axiosClient from './axiosClient';
 
-const API_URL = 'https://threecongianphim.onrender.com/api/auth'; // sửa URL tùy theo backend bạn
+const authApi = {
+  registerUser: async (userData) => {
+    try {
+      const response = await axiosClient.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 
-export const registerUser = async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/register`, userData);
-    return response.data;
-  } catch (error) {
-    throw error.response.data;
-  }
+  loginUser: async (userData) => {
+    try {
+      const response = await axiosClient.post('/auth/login', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
-export const loginUser = async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/login`, userData);
-    return response.data;
-  } catch (error) {
-    throw error.response.data;
-  }
-};
+export default authApi;

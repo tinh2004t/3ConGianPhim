@@ -231,7 +231,7 @@ const Movies = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Phim bộ</h1>
+      <h1 className="text-3xl font-bold mb-8">Phim lẻ</h1>
 
        {/* Filters - Responsive Design */}
       <div className="bg-gray-800 rounded-lg p-3 sm:p-6 mb-6 sm:mb-8">
