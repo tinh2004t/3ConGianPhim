@@ -486,9 +486,10 @@ const MoviePlayer = () => {
 
         {/* Danh sách tập */}
         <div className="flex flex-col md:flex-row justify-between gap-6 z-40 relative">
-          <div className="md:w-2/3">
+          <div className="w-full">
             <h3 className="text-xl font-semibold mb-2">Danh sách tập</h3>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-12 gap-3">
+
               {episodes.map(ep => (
                 <button
                   key={ep._id}

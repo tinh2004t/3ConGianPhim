@@ -233,12 +233,13 @@ const Movies = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Phim bộ</h1>
 
-      {/* Filters */}
-      <div className="bg-gray-800 rounded-lg p-6 mb-8">
-        <div className="flex flex-wrap gap-6">
+       {/* Filters - Responsive Design */}
+      <div className="bg-gray-800 rounded-lg p-3 sm:p-6 mb-6 sm:mb-8">
+        {/* Mobile: 2x2 grid layout, Desktop: Flex horizontally */}
+        <div className="grid grid-cols-2 gap-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-4 lg:gap-6">
           {/* Genre */}
-          <div className="w-full md:w-auto">
-            <label className="block text-gray-400 mb-2">Genre</label>
+          <div className="sm:w-auto sm:min-w-[180px] lg:min-w-[200px]">
+            <label className="block text-gray-400 mb-1 sm:mb-2 text-xs sm:text-sm font-medium">Thể loại</label>
             <select
               value={genreFilter}
               onChange={(e) => {
@@ -246,7 +247,7 @@ const Movies = () => {
                 setGenreFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-gray-700 text-white rounded px-4 py-2 w-full min-w-[150px]"
+              className="bg-gray-700 text-white rounded px-2 sm:px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
               {genres.map((genre) => (
                 <option key={genre.id} value={genre.id}>
@@ -257,15 +258,15 @@ const Movies = () => {
           </div>
 
           {/* Year */}
-          <div className="w-full md:w-auto">
-            <label className="block text-gray-400 mb-2">Year</label>
+          <div className="sm:w-auto sm:min-w-[140px] lg:min-w-[160px]">
+            <label className="block text-gray-400 mb-1 sm:mb-2 text-xs sm:text-sm font-medium">Năm</label>
             <select
               value={yearFilter}
               onChange={(e) => {
                 setYearFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-gray-700 text-white rounded px-4 py-2 w-full min-w-[150px]"
+              className="bg-gray-700 text-white rounded px-2 sm:px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
               {years.map((year) => (
                 <option key={year.id} value={year.id}>
@@ -276,32 +277,32 @@ const Movies = () => {
           </div>
 
           {/* Sort */}
-          <div className="w-full md:w-auto">
-            <label className="block text-gray-400 mb-2">Sort By</label>
+          <div className="sm:w-auto sm:min-w-[200px] lg:min-w-[220px]">
+            <label className="block text-gray-400 mb-1 sm:mb-2 text-xs sm:text-sm font-medium">Sắp xếp</label>
             <select
               value={sortBy}
               onChange={(e) => {
                 setSortBy(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-gray-700 text-white rounded px-4 py-2 w-full min-w-[200px]"
+              className="bg-gray-700 text-white rounded px-2 sm:px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
-              <option value="popularity">Độ phổ biến</option>
-              <option value="release-date-desc">Ngày phát hành (Mới nhất)</option>
-              <option value="release-date-asc">Ngày phát hành (Cũ nhất)</option>
-              <option value="title-asc">Tiêu đề (A-Z)</option>
-              <option value="title-desc">Tiêu đề (Z-A)</option>
+              <option value="popularity">Phổ biến</option>
+              <option value="release-date-desc">Mới nhất</option>
+              <option value="release-date-asc">Cũ nhất</option>
+              <option value="title-asc">A-Z</option>
+              <option value="title-desc">Z-A</option>
             </select>
           </div>
 
           {/* Clear Filters Button */}
           {(genreFilter !== 'all' || yearFilter !== 'all' || sortBy !== 'popularity') && (
-            <div className="w-full md:w-auto flex items-end">
+            <div className="flex items-end sm:w-auto sm:flex sm:items-end">
               <button
                 onClick={handleClearFilters}
-                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-500 transition"
+                className="w-full sm:w-auto bg-gray-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded hover:bg-gray-500 transition text-xs sm:text-sm font-medium"
               >
-                Clear Filters
+                Xóa
               </button>
             </div>
           )}
@@ -353,23 +354,27 @@ const Movies = () => {
             <div className="flex justify-center items-center gap-2 flex-wrap">
               {/* Previous Button */}
               <button
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
               >
-                ‹ Prev
+                <span className="hidden sm:inline">‹ Prev</span>
+                <span className="sm:hidden">‹</span>
               </button>
 
               {/* Page Numbers */}
-              {renderPaginationButtons()}
+              <div className="flex gap-1 sm:gap-2 overflow-x-auto max-w-full">
+                {renderPaginationButtons()}
+              </div>
 
               {/* Next Button */}
               <button
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
               >
-                Next ›
+                <span className="hidden sm:inline">Next ›</span>
+                <span className="sm:hidden">›</span>
               </button>
             </div>
           )}

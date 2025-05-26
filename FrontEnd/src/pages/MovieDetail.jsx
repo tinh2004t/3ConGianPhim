@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import episodeApi from '../api/episodeApi';
 import userApi from '../api/userApi';
 
+
 // Component Notification tùy chỉnh
 const Notification = ({ notification, onClose }) => {
   useEffect(() => {
@@ -112,6 +113,8 @@ const MovieDetail = () => {
   const [notification, setNotification] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isAddingFavorite, setIsAddingFavorite] = useState(false);
+  const [showAllEpisodes, setShowAllEpisodes] = useState(false);
+  const [maxEpisodesToShow, setMaxEpisodesToShow] = useState(11);
   const navigate = useNavigate();
 
   // Hàm hiển thị thông báo
@@ -148,6 +151,21 @@ const MovieDetail = () => {
 
     fetchMovieData();
   }, [id]);
+
+  useEffect(() => {
+    const updateMaxEpisodes = () => {
+      setMaxEpisodesToShow(window.innerWidth <= 768 ? 9 : 11);
+    };
+
+    updateMaxEpisodes(); // Cập nhật khi lần đầu render
+    window.addEventListener('resize', updateMaxEpisodes);
+
+    return () => window.removeEventListener('resize', updateMaxEpisodes);
+  }, []);
+
+  const episodesToDisplay = showAllEpisodes ? episodes : episodes.slice(0, maxEpisodesToShow);
+  const hasMoreEpisodes = episodes.length > maxEpisodesToShow && !showAllEpisodes;
+
 
   const handleAddToFavorites = async () => {
     const token = localStorage.getItem('token');
@@ -288,11 +306,10 @@ const MovieDetail = () => {
             <button
               onClick={handleAddToFavorites}
               disabled={isAddingFavorite}
-              className={`px-4 py-2 rounded transition flex items-center gap-2 ${
-                isAddingFavorite 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-red-600 hover:bg-red-700'
-              }`}
+              className={`px-4 py-2 rounded transition flex items-center gap-2 ${isAddingFavorite
+                ? 'bg-gray-600 cursor-not-allowed'
+                : 'bg-red-600 hover:bg-red-700'
+                }`}
             >
               {isAddingFavorite ? (
                 <>
@@ -318,7 +335,7 @@ const MovieDetail = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {episodes.map((ep) => (
+                    {episodesToDisplay.map((ep) => (
                       <a
                         key={ep._id}
                         href={`/watch/${movieData._id}/episodes/${ep._id}`}
@@ -327,6 +344,14 @@ const MovieDetail = () => {
                         {getEpisodeDisplayName(ep)}
                       </a>
                     ))}
+                    {hasMoreEpisodes && (
+                      <button
+                        onClick={() => setShowAllEpisodes(true)}
+                        className="bg-gray-600 px-3 py-1 rounded hover:bg-gray-500 transition"
+                      >
+                        ...
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
