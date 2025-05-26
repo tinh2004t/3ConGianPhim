@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/auth'; // sửa URL tùy theo backend bạn
+const API_URL = 'https://threecongianphim.onrender.com/api/auth'; // sửa URL tùy theo backend bạn
 
 export const registerUser = async (userData) => {
   try {
