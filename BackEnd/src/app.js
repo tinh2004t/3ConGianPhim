@@ -8,6 +8,8 @@ const userRoutes = require('./routes/user.routes');
 const commentRoutes = require('./routes/comment.routes');
 const adminLogRoutes = require('./routes/adminlog.route');
 const notificationRoute = require('./routes/notification.route');
+const requestLogger = require('./middlewares/requestLogger');
+
 
 const app = express();
 
@@ -23,7 +25,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin-logs', adminLogRoutes);
 app.use('/api/notifications', notificationRoute);
-
+app.use(requestLogger);
 
 app.get('/', (req, res) => {
   res.send('🎬 Movie API is running!');
