@@ -1,21 +1,50 @@
-import axios from 'axios';
+// src/api/authApi.js
+import axiosClient from './axiosClient';
 
-const API_URL = 'http://localhost:5000/api/auth'; // sửa URL tùy theo backend bạn
+const authApi = {
+  // Đăng ký tài khoản
+  registerUser: async (userData) => {
+    try {
+      const response = await axiosClient.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 
-export const registerUser = async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/register`, userData);
-    return response.data;
-  } catch (error) {
-    throw error.response.data;
-  }
+  // Đăng nhập
+  loginUser: async (userData) => {
+    try {
+      const response = await axiosClient.post('/auth/login', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Gửi mã xác minh qua email (quên mật khẩu)
+  sendResetCode: async (email) => {
+    try {
+      const response = await axiosClient.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Xác minh mã và đổi mật khẩu
+  resetPassword: async (email, code, newPassword) => {
+    try {
+      const response = await axiosClient.post('/auth/reset-password', {
+        email,
+        code,
+        newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };
 
-export const loginUser = async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/login`, userData);
-    return response.data;
-  } catch (error) {
-    throw error.response.data;
-  }
-};
+export default authApi;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { registerUser } from '../api/authApi';
+import authApi from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
@@ -55,7 +55,7 @@ export default function Register() {
     }
 
     try {
-      await registerUser({
+      await authApi.registerUser({
         username: form.username,
         email: form.email,
         password: form.password

@@ -20,6 +20,7 @@ import MovieManagement from './pages/admin/Movies/MovieManagement';
 import UserManagement from './pages/admin/Users/UserManagement';
 import GenreManagement from './pages/admin/Genres/GenreManagement';
 import EpisodeManagement from './pages/admin/Episodes/EpisodeManagement';
+import ForgotPassword from './pages/ForgotPassword';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/watch/:movieId/episodes/:episodeId" element={<MoviePlayer />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
         </Route>
 
         {/* ADMIN LAYOUT */}

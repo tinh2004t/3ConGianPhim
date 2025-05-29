@@ -1,8 +1,8 @@
-// src/pages/Login.jsx
+// src/pages/Login.jsx - Cập nhật với link đến trang quên mật khẩu
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { loginUser } from '../api/authApi';
+import  authApi  from '../api/authApi';
 import { UserContext } from '../contexts/UserContext';
 
 const Login = () => {
@@ -19,7 +19,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res       = await loginUser(form);   // gọi API
+      const res       = await authApi.loginUser(form);   // gọi API
       const userData = jwtDecode(res.token);    // giải mã token
 
       login(userData, res.token);                // đưa vào Context + localStorage
@@ -67,7 +67,12 @@ const Login = () => {
           <label className="flex items-center">
             <input type="checkbox" className="mr-2" /> Nhớ&nbsp;mật khẩu
           </label>
-          <span className="cursor-pointer hover:text-white">Quên&nbsp;mật khẩu?</span>
+          <Link 
+            to="/forgot-password" 
+            className="cursor-pointer hover:text-white hover:underline"
+          >
+            Quên&nbsp;mật khẩu?
+          </Link>
         </div>
 
         <button
