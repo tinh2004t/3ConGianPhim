@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import movieApi from "../../api/movieApi";
 import { useNavigate } from "react-router-dom";
-import "../../../public/MasterBanner.css"; // Import CSS file
+import "../../../public/MasterBanner.css";
 
-// Chuyển link YouTube thành link nhúng (embed)
+// Convert YouTube URL to embed
 const convertToEmbedURL = (url) => {
   try {
     if (url.includes("youtube.com")) {
@@ -25,21 +25,38 @@ const MasterBanner = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const [screenSize, setScreenSize] = useState('desktop');
   const [mediaError, setMediaError] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  
+  // Touch/Swipe states
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState('');
+  const [slideAnimation, setSlideAnimation] = useState('');
+  
   const navigate = useNavigate();
 
-  // Detect mobile device
+  // Detect screen size with more granular breakpoints
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 640);
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      if (width <= 480) {
+        setScreenSize('mobile');
+      } else if (width <= 768) {
+        setScreenSize('tablet');
+      } else if (width <= 1024) {
+        setScreenSize('laptop');
+      } else {
+        setScreenSize('desktop');
+      }
     };
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
     
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
   useEffect(() => {
@@ -75,17 +92,17 @@ const MasterBanner = () => {
 
   if (isLoading) {
     return (
-      <div className="master-banner">
+      <div className={`master-banner ${screenSize}`}>
         <div className="banner-overlay" />
         <div className="banner-content">
           <div className="content-wrapper">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-300 rounded mb-4 w-3/4"></div>
-              <div className="h-4 bg-gray-300 rounded mb-2 w-1/2"></div>
-              <div className="h-4 bg-gray-300 rounded mb-4 w-full"></div>
-              <div className="flex space-x-4">
-                <div className="h-10 bg-gray-300 rounded w-32"></div>
-                <div className="h-10 bg-gray-300 rounded w-24"></div>
+            <div className="loading-skeleton">
+              <div className="skeleton-title"></div>
+              <div className="skeleton-meta"></div>
+              <div className="skeleton-description"></div>
+              <div className="skeleton-buttons">
+                <div className="skeleton-btn primary"></div>
+                <div className="skeleton-btn secondary"></div>
               </div>
             </div>
           </div>
@@ -97,6 +114,58 @@ const MasterBanner = () => {
   if (slides.length === 0) return null;
 
   const current = slides[currentIndex];
+
+  // Touch handlers for swipe functionality
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setSwipeDirection('left');
+      handleSwipeNext();
+    } else if (isRightSwipe) {
+      setSwipeDirection('right');
+      handleSwipePrev();
+    }
+  };
+
+  const handleSwipeNext = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setSlideAnimation('slide-left');
+    nextSlide();
+    setTimeout(() => {
+      setIsTransitioning(false);
+      setSlideAnimation('');
+      setSwipeDirection('');
+    }, 600);
+  };
+
+  const handleSwipePrev = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setSlideAnimation('slide-right');
+    prevSlide();
+    setTimeout(() => {
+      setIsTransitioning(false);
+      setSlideAnimation('');
+      setSwipeDirection('');
+    }, 600);
+  };
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % slides.length);
@@ -110,7 +179,17 @@ const MasterBanner = () => {
     setCurrentIndex(index);
   };
 
-  const maxLength = isMobile ? 100 : 150;
+  // Dynamic text length based on screen size
+  const getMaxLength = () => {
+    switch(screenSize) {
+      case 'mobile': return 80;
+      case 'tablet': return 120;
+      case 'laptop': return 160;
+      default: return 200;
+    }
+  };
+
+  const maxLength = getMaxLength();
   const shortDescription = current?.description?.slice(0, maxLength) + "...";
   const isLong = current?.description?.length > maxLength;
 
@@ -134,21 +213,41 @@ const MasterBanner = () => {
                          current.trailerUrl?.includes("youtu.be") || 
                          (current.trailerUrl?.includes("http") && !current.trailerUrl?.includes(".jpg") && !current.trailerUrl?.includes(".png")));
 
+  // Determine display strategy based on screen size and content
+  const getDisplayStrategy = () => {
+    if (screenSize === 'mobile') {
+      return 'poster-priority'; // Poster chính, video background blur
+    } else if (screenSize === 'tablet') {
+      return 'hybrid'; // Cân bằng giữa poster và video
+    } else {
+      return 'video-priority'; // Video chính, poster fallback
+    }
+  };
+
+  const displayStrategy = getDisplayStrategy();
+
   return (
-    <div className="master-banner">
-      {/* Background Media với fallback */}
-      <div className="video-container">
-        {/* Fallback poster image */}
-        <img
-          className="media-fallback"
-          src={current.posterUrl}
-          alt={current.title}
-          loading="eager"
-        />
+    <div 
+      className={`master-banner ${screenSize} ${displayStrategy} ${slideAnimation} ${isTransitioning ? 'transitioning' : ''}`}
+      onTouchStart={screenSize === 'mobile' ? onTouchStart : undefined}
+      onTouchMove={screenSize === 'mobile' ? onTouchMove : undefined}
+      onTouchEnd={screenSize === 'mobile' ? onTouchEnd : undefined}
+    >
+      {/* Smart Background Media */}
+      <div className="media-container">
+        {/* Primary poster layer */}
+        <div className="poster-layer">
+          <img
+            className="poster-image"
+            src={current.posterUrl}
+            alt={current.title}
+            loading="eager"
+          />
+        </div>
         
-        {/* Video content */}
+        {/* Video layer with smart visibility */}
         {!mediaError && current.trailerUrl && (
-          <>
+          <div className={`video-layer ${isVideoLoaded ? 'loaded' : ''}`}>
             {current.trailerUrl?.includes("youtube.com") || current.trailerUrl?.includes("youtu.be") ? (
               <iframe
                 src={convertToEmbedURL(current.trailerUrl)}
@@ -158,10 +257,7 @@ const MasterBanner = () => {
                 allowFullScreen
                 onLoad={handleVideoLoad}
                 onError={handleMediaError}
-                style={{
-                  opacity: isVideoLoaded ? 1 : 0,
-                  transition: 'opacity 0.5s ease'
-                }}
+                className="media-iframe"
               />
             ) : current.trailerUrl?.includes("http") && !current.trailerUrl?.includes(".jpg") && !current.trailerUrl?.includes(".png") ? (
               <video
@@ -173,53 +269,86 @@ const MasterBanner = () => {
                 onLoadedData={handleVideoLoad}
                 onError={handleMediaError}
                 key={current.trailerUrl}
-                style={{
-                  opacity: isVideoLoaded ? 1 : 0,
-                  transition: 'opacity 0.5s ease'
-                }}
+                className="media-video"
               />
             ) : null}
-          </>
+          </div>
+        )}
+
+        {/* Adaptive blur background for mobile */}
+        {screenSize === 'mobile' && !mediaError && current.trailerUrl && (
+          <div className="blur-background">
+            {current.trailerUrl?.includes("youtube.com") || current.trailerUrl?.includes("youtu.be") ? (
+              <iframe
+                src={convertToEmbedURL(current.trailerUrl)}
+                title={`${current.title} background`}
+                frameBorder="0"
+                allow="autoplay"
+                className="blur-iframe"
+              />
+            ) : (
+              <video
+                src={current.trailerUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="blur-video"
+              />
+            )}
+          </div>
         )}
       </div>
 
-      {/* Enhanced Overlay cho video, regular overlay cho image */}
-      <div className={(isVideoContent && !mediaError) ? "video-enhanced-overlay" : "banner-overlay"}></div>
+      {/* Responsive overlay system */}
+      <div className={`banner-overlay ${displayStrategy} ${isVideoContent && !mediaError ? 'video-active' : 'poster-active'}`}></div>
 
-      {/* Content */}
+      {/* Content with responsive layout */}
       <div className="banner-content">
-        <div className="content-wrapper fade-in">
-          {/* Title */}
+        <div className={`content-wrapper ${screenSize} ${slideAnimation}`}>
+          {/* Title with responsive sizing */}
           <h1 className="banner-title">
             {current.title}
           </h1>
 
-          {/* Metadata */}
+          {/* Adaptive metadata */}
           <div className="banner-meta">
-            {current.country} • {current.releaseYear}
-            {current.duration && <span> • {current.duration} phút</span>}
-            {current.imdbRating && <span> • IMDb {current.imdbRating}</span>}
+            <span className="meta-primary">{current.country}</span>
+            <span className="meta-separator">•</span>
+            <span className="meta-primary">{current.releaseYear}</span>
+            {current.duration && screenSize !== 'mobile' && (
+              <>
+                <span className="meta-separator">•</span>
+                <span className="meta-secondary">{current.duration} phút</span>
+              </>
+            )}
+            {current.imdbRating && (
+              <>
+                <span className="meta-separator">•</span>
+                <span className="meta-rating">IMDb {current.imdbRating}</span>
+              </>
+            )}
           </div>
 
-          {/* Genres */}
+          {/* Responsive genres */}
           <div className="genres-container">
             {(current.genres || [])
-              .slice(0, isMobile ? 2 : 3)
+              .slice(0, screenSize === 'mobile' ? 2 : screenSize === 'tablet' ? 3 : 4)
               .map((genre, idx) => (
                 <span key={idx} className="genre-tag">
                   {typeof genre === "object" ? genre.name : genre}
                 </span>
               ))}
-            {(current.genres?.length || 0) > (isMobile ? 2 : 3) && (
-              <span className="genre-tag">
-                +{current.genres.length - (isMobile ? 2 : 3)}
+            {(current.genres?.length || 0) > (screenSize === 'mobile' ? 2 : screenSize === 'tablet' ? 3 : 4) && (
+              <span className="genre-tag more">
+                +{current.genres.length - (screenSize === 'mobile' ? 2 : screenSize === 'tablet' ? 3 : 4)}
               </span>
             )}
           </div>
 
-          {/* Description */}
+          {/* Smart description */}
           <div className="banner-description">
-            <p>
+            <p className={screenSize}>
               {isExpanded || !isLong ? current.description : shortDescription}
             </p>
             {isLong && (
@@ -233,48 +362,50 @@ const MasterBanner = () => {
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="button-group">
+          {/* Responsive action buttons */}
+          <div className={`button-group ${screenSize}`}>
             <button
               onClick={handleWatchClick}
               className="btn-primary"
               aria-label={`Xem phim ${current.title}`}
             >
-              <span>▶</span>
-              Xem ngay
+              <span className="btn-icon">▶</span>
+              <span className="btn-text">{screenSize === 'mobile' ? 'Xem' : 'Xem ngay'}</span>
             </button>
             <button
               onClick={handleDetailsClick}
               className="btn-secondary"
               aria-label={`Xem chi tiết phim ${current.title}`}
             >
-              Chi tiết
+              <span className="btn-text">{screenSize === 'mobile' ? 'Chi Tiết' : 'Chi tiết'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Navigation Controls */}
-      <div className="nav-controls">
-        <button
-          onClick={prevSlide}
-          className="nav-button"
-          aria-label="Slide trước"
-        >
-          ‹
-        </button>
-        <button
-          onClick={nextSlide}
-          className="nav-button"
-          aria-label="Slide tiếp theo"
-        >
-          ›
-        </button>
-      </div>
+      {/* Responsive navigation */}
+      {screenSize !== 'mobile' && (
+        <div className="nav-controls">
+          <button
+            onClick={prevSlide}
+            className="nav-button prev"
+            aria-label="Slide trước"
+          >
+            ‹
+          </button>
+          <button
+            onClick={nextSlide}
+            className="nav-button next"
+            aria-label="Slide tiếp theo"
+          >
+            ›
+          </button>
+        </div>
+      )}
 
-      {/* Dots Indicator */}
-      <div className="dots-container">
-        {slides.slice(0, isMobile ? 5 : 10).map((_, idx) => (
+      {/* Smart dots indicator */}
+      <div className={`dots-container ${screenSize}`}>
+        {slides.slice(0, screenSize === 'mobile' ? 5 : screenSize === 'tablet' ? 7 : 10).map((_, idx) => (
           <button
             key={idx}
             onClick={() => goToSlide(idx)}
@@ -282,7 +413,21 @@ const MasterBanner = () => {
             aria-label={`Đi tới slide ${idx + 1}`}
           />
         ))}
+        {slides.length > (screenSize === 'mobile' ? 5 : screenSize === 'tablet' ? 7 : 10) && (
+          <span className="dots-more">+{slides.length - (screenSize === 'mobile' ? 5 : screenSize === 'tablet' ? 7 : 10)}</span>
+        )}
       </div>
+
+      {/* Mobile swipe indicator with animation */}
+      {screenSize === 'mobile' && (
+        <div className="swipe-indicator">
+          <div className="swipe-hint">
+            <span className="swipe-arrow left">←</span>
+            <span className="swipe-text">Vuốt để xem thêm</span>
+            <span className="swipe-arrow right">→</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
