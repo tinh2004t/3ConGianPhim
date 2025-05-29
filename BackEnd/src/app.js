@@ -15,6 +15,8 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
+
 
 // Routes
 app.use('/api/movies', movieRoutes);
@@ -25,7 +27,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin-logs', adminLogRoutes);
 app.use('/api/notifications', notificationRoute);
-app.use(requestLogger);
 
 app.get('/', (req, res) => {
   res.send('🎬 Movie API is running!');
