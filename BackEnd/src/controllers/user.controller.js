@@ -2,10 +2,9 @@ const User = require('../models/user.model');
 const Movie = require('../models/movie.model');
 const logAdminAction = require('../utils/logAdminAction');
 
-
 // Lấy thông tin người dùng
 exports.getMe = async (req, res) => {
-    console.log('User from token:', req.user);
+  console.log('User from token:', req.user);
   try {
     const user = await User.findById(req.user.userId).select('-passwordHash');
     res.json(user);
@@ -48,7 +47,7 @@ exports.addHistory = async (req, res) => {
 
     // Kiểm tra nếu đã có lịch sử cho phim này thì cập nhật tập mới
     const existing = user.history.find(
-      (item) => item.movie.toString() === movieId
+      (item) => item.movie === movieId // Bỏ toString() vì movieId giờ là String
     );
 
     if (existing) {
@@ -67,16 +66,16 @@ exports.addHistory = async (req, res) => {
   }
 };
 
-
+// Xóa phim khỏi yêu thích
 exports.removeFavorite = async (req, res) => {
   try {
-    const { movieId } = req.params;  // Lấy movieId từ params, không phải body
+    const { movieId } = req.params;
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
     user.favorites = user.favorites.filter(
-      (favId) => favId.toString() !== movieId
+      (favId) => favId !== movieId // Bỏ toString() vì favId giờ là String
     );
     await user.save();
     res.json({ message: 'Đã xóa khỏi yêu thích' });
@@ -86,13 +85,12 @@ exports.removeFavorite = async (req, res) => {
   }
 };
 
-
 // Lấy lịch sử xem
 exports.getHistory = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId)
       .populate('history.movie')
-      .populate('history.episode'); // populate thêm episode
+      .populate('history.episode');
 
     res.json(user.history);
   } catch (err) {
@@ -139,7 +137,6 @@ exports.deleteUser = async (req, res) => {
     const { userId } = req.params;
     const deleted = await User.findByIdAndDelete(userId);
 
-
     if (!deleted) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
@@ -151,4 +148,3 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
-

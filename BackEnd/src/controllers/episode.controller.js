@@ -9,10 +9,10 @@ const mongoose = require('mongoose');
 exports.createEpisode = async (req, res) => {
   try {
     const { title, episodeNumber, videoSources } = req.body;
-    const movieId = req.params.movieId;
+    const movieId = req.params.movieId; // Now movieId is a string slug
 
     console.log('=== CREATE EPISODE START ===');
-    console.log('Movie ID:', movieId);
+    console.log('Movie ID (slug):', movieId);
     console.log('User ID:', req.user?.userId);
 
     if (!req.user || !req.user.userId) {
@@ -25,7 +25,13 @@ exports.createEpisode = async (req, res) => {
       });
     }
 
-    // Check if episode already exists
+    // Verify movie exists with the given slug
+    const movie = await Movie.findById(movieId);
+    if (!movie) {
+      return res.status(404).json({ message: 'Không tìm thấy phim' });
+    }
+
+    // Check if episode already exists for this movie
     const existingEpisode = await Episode.findOne({ 
       movie: movieId, 
       episodeNumber 
@@ -39,7 +45,7 @@ exports.createEpisode = async (req, res) => {
 
     // Create episode
     const episode = new Episode({
-      movie: movieId,
+      movie: movieId, // Store as string slug
       title,
       episodeNumber,
       videoSources,
@@ -56,7 +62,7 @@ exports.createEpisode = async (req, res) => {
     try {
       console.log('=== CREATING NOTIFICATIONS ===');
       
-      // Find users who have this movie in favorites
+      // Find users who have this movie in favorites (using string slug)
       const usersWithFavorite = await User.find({ 
         favorites: movieId 
       }).select('_id');
@@ -67,7 +73,7 @@ exports.createEpisode = async (req, res) => {
         // Prepare notification data
         const notificationData = usersWithFavorite.map(user => ({
           user: user._id,
-          movie: movieId,
+          movie: movieId, // Store as string slug
           episode: episode._id,
           title: 'Tập phim mới',
           message: `Phim bạn yêu thích đã có tập mới: "${episode.title}"`,
@@ -115,7 +121,7 @@ exports.updateEpisode = async (req, res) => {
     // Check if episodeNumber is unique (exclude current episode)
     if (episodeNumber !== existingEpisode.episodeNumber) {
       const duplicateEpisode = await Episode.findOne({ 
-        movie: existingEpisode.movie, 
+        movie: existingEpisode.movie, // This is now a string slug
         episodeNumber: episodeNumber,
         _id: { $ne: req.params.id }
       });
@@ -168,11 +174,20 @@ exports.deleteEpisode = async (req, res) => {
   }
 };
 
-// GET - Danh sách tập phim theo movieId
+// GET - Danh sách tập phim theo movieId (now string slug)
 exports.getEpisodesByMovie = async (req, res) => {
   try {
-    const episodes = await Episode.find({ movie: req.params.movieId })
+    const movieId = req.params.movieId; // This is now a string slug
+    
+    // Verify movie exists
+    const movie = await Movie.findById(movieId);
+    if (!movie) {
+      return res.status(404).json({ message: 'Không tìm thấy phim' });
+    }
+
+    const episodes = await Episode.find({ movie: movieId })
       .sort({ episodeNumber: 1 });
+    
     res.status(200).json(episodes);
   } catch (err) {
     console.error('Get episodes error:', err);
@@ -180,15 +195,21 @@ exports.getEpisodesByMovie = async (req, res) => {
   }
 };
 
-// GET - 1 tập phim cụ thể (TĂNG VIEW COUNT KHI XEM TẬP)
+// GET - 1 tập phim cụ thể
 exports.getEpisodeById = async (req, res) => {
   try {
-    const episode = await Episode.findById(req.params.id);
+    const episodeId = req.params.id;
+    
+    // Validate episodeId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(episodeId)) {
+      return res.status(400).json({ message: 'Episode ID không hợp lệ' });
+    }
+
+    const episode = await Episode.findById(episodeId);
     if (!episode) {
       return res.status(404).json({ message: 'Không tìm thấy tập phim' });
     }
 
-    // Đã loại bỏ phần tăng viewCount - chỉ trả về dữ liệu
     res.status(200).json(episode);
   } catch (err) {
     console.error('Get episode error:', err);
@@ -196,19 +217,25 @@ exports.getEpisodeById = async (req, res) => {
   }
 };
 
-// GET - Tập phim theo movieId và episodeId (TĂNG VIEW COUNT KHI XEM TẬP)
+// GET - Tập phim theo movieId (string slug) và episodeId (ObjectId)
 exports.getEpisodeByMovieAndEpisodeId = async (req, res) => {
   const { movieId, episodeId } = req.params;
 
   try {
-    // Validate ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(movieId) || !mongoose.Types.ObjectId.isValid(episodeId)) {
-      return res.status(400).json({ message: 'ID không hợp lệ' });
+    // Validate episodeId is ObjectId, movieId is string slug (no validation needed)
+    if (!mongoose.Types.ObjectId.isValid(episodeId)) {
+      return res.status(400).json({ message: 'Episode ID không hợp lệ' });
+    }
+
+    // Verify movie exists
+    const movie = await Movie.findById(movieId);
+    if (!movie) {
+      return res.status(404).json({ message: 'Không tìm thấy phim' });
     }
 
     const episode = await Episode.findOne({ 
       _id: episodeId, 
-      movie: movieId 
+      movie: movieId // movieId is now string slug
     });
 
     if (!episode) {
@@ -217,7 +244,6 @@ exports.getEpisodeByMovieAndEpisodeId = async (req, res) => {
       });
     }
 
-    // Đã loại bỏ phần tăng viewCount - chỉ trả về dữ liệu
     res.status(200).json(episode);
   } catch (err) {
     console.error('Get episode by movie and episode ID error:', err);
@@ -225,22 +251,28 @@ exports.getEpisodeByMovieAndEpisodeId = async (req, res) => {
   }
 };
 
-// POST - Tăng view count khi bắt đầu xem tập (alternative approach)
+// POST - Tăng view count khi bắt đầu xem tập
 exports.watchEpisode = async (req, res) => {
   try {
     const { movieId, episodeId } = req.params;
     
     console.log(`🎬 watchEpisode called - movieId: ${movieId}, episodeId: ${episodeId}`);
 
-    // Validate ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(movieId) || !mongoose.Types.ObjectId.isValid(episodeId)) {
-      return res.status(400).json({ message: 'ID không hợp lệ' });
+    // Validate episodeId is ObjectId, movieId is string slug
+    if (!mongoose.Types.ObjectId.isValid(episodeId)) {
+      return res.status(400).json({ message: 'Episode ID không hợp lệ' });
+    }
+
+    // Verify movie exists (movieId is now string slug)
+    const movie = await Movie.findById(movieId);
+    if (!movie) {
+      return res.status(404).json({ message: 'Không tìm thấy phim' });
     }
 
     // Verify episode exists and belongs to movie
     const episode = await Episode.findOne({ 
       _id: episodeId, 
-      movie: movieId 
+      movie: movieId // movieId is string slug
     });
 
     if (!episode) {
@@ -251,7 +283,7 @@ exports.watchEpisode = async (req, res) => {
 
     // Increment movie view count
     const updatedMovie = await Movie.findByIdAndUpdate(
-      movieId,
+      movieId, // movieId is string slug
       { $inc: { viewCount: 1 } },
       { new: true }
     ).populate('genres');
@@ -278,3 +310,9 @@ exports.watchEpisode = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi ghi nhận lượt xem' });
   }
 };
+
+// Helper function to validate movie slug format (optional)
+function isValidMovieSlug(slug) {
+  // Basic slug validation: contains only lowercase letters, numbers, and hyphens
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+}

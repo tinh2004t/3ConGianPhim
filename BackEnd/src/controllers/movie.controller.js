@@ -24,13 +24,11 @@ exports.getAllMovies = async (req, res) => {
       query.type = type;
     }
 
-    // Sửa lại phần genre filter
+    // Genre filter - chỉ dùng ObjectId cho genres vì genres vẫn giữ ObjectId
     if (genre) {
-      // Kiểm tra xem genre có phải là ObjectId không
       if (mongoose.Types.ObjectId.isValid(genre)) {
         query.genres = new mongoose.Types.ObjectId(genre);
       } else {
-        // Nếu là string (tên thể loại), tìm theo tên trong Genre collection
         const Genre = require("../models/genre.model");
         try {
           const genreDoc = await Genre.findOne({
@@ -39,14 +37,10 @@ exports.getAllMovies = async (req, res) => {
           if (genreDoc) {
             query.genres = genreDoc._id;
           } else {
-            // Nếu không tìm thấy genre, tạo query không match gì để trả về empty
-            query.genres = new mongoose.Types.ObjectId(
-              "000000000000000000000000"
-            );
+            query.genres = new mongoose.Types.ObjectId("000000000000000000000000");
           }
         } catch (err) {
           console.error("Error finding genre:", err);
-          // Fallback: không áp dụng filter genre nếu có lỗi
           delete query.genres;
         }
       }
@@ -56,7 +50,6 @@ exports.getAllMovies = async (req, res) => {
       query.releaseYear = Number(year);
     }
 
-    // Thêm xử lý yearBefore
     if (yearBefore) {
       query.releaseYear = { $lt: Number(yearBefore) };
     }
@@ -64,7 +57,6 @@ exports.getAllMovies = async (req, res) => {
     if (status) query.status = status;
     if (country) query.country = { $regex: country, $options: "i" };
 
-    // Tìm kiếm theo title và description
     if (q) {
       query.$or = [
         { title: { $regex: q, $options: "i" } },
@@ -98,11 +90,12 @@ exports.getMovieById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    // Với string slug, không cần validate ObjectId nữa
+    if (!id || typeof id !== 'string' || id.trim() === '') {
       return res.status(400).json({ message: "ID không hợp lệ" });
     }
 
-    const movie = await Movie.findById(id).populate("genres");
+    const movie = await Movie.findById(id.trim()).populate("genres");
 
     if (!movie) {
       return res.status(404).json({ message: "Không tìm thấy phim" });
@@ -147,24 +140,32 @@ exports.filterMovies = async (req, res) => {
 // POST /api/movies
 exports.createMovie = async (req, res) => {
   try {
-    // Validate required fields
-    const { title, description, genres } = req.body;
+    const { title, description, genres, slug } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ message: "Tên phim không được để trống" });
     }
 
+    // Tạo slug từ title hoặc sử dụng slug được truyền vào
+    const movieSlug = slug && slug.trim() ? slug.trim() : Movie.createSlug(title);
+    
+    // Kiểm tra xem slug đã tồn tại chưa
+    const existingMovie = await Movie.findById(movieSlug);
+    if (existingMovie) {
+      return res.status(400).json({ 
+        message: "Slug đã tồn tại, vui lòng chọn slug khác hoặc để trống để tự động tạo" 
+      });
+    }
+
     // Process genres - convert to ObjectIds if needed
     let processedGenres = [];
     if (Array.isArray(genres) && genres.length > 0) {
-      const Genre = require("../models/genre.model"); // Import Genre model
+      const Genre = require("../models/genre.model");
 
       for (let genre of genres) {
         if (typeof genre === "string") {
-          // Find or create genre by name
           let genreDoc = await Genre.findOne({ name: genre });
           if (!genreDoc) {
-            // Create new genre if it doesn't exist
             genreDoc = new Genre({ name: genre });
             await genreDoc.save();
           }
@@ -176,20 +177,23 @@ exports.createMovie = async (req, res) => {
     }
 
     const movieData = {
-      ...req.body,
+      _id: movieSlug,
       title: title.trim(),
       description: description ? description.trim() : "",
       genres: processedGenres,
       releaseYear: req.body.releaseYear || new Date().getFullYear(),
       status: req.body.status || "ongoing",
       type: req.body.type || "Movies",
+      country: req.body.country || "",
+      totalEpisodes: req.body.totalEpisodes || 0,
+      posterUrl: req.body.posterUrl || "",
+      trailerUrl: req.body.trailerUrl || "",
       viewCount: 0,
     };
 
     const newMovie = new Movie(movieData);
     const saved = await newMovie.save();
 
-    // Populate genres before returning
     const populatedMovie = await Movie.findById(saved._id).populate("genres");
 
     console.log("Admin đang thao tác:", req.user);
@@ -202,6 +206,14 @@ exports.createMovie = async (req, res) => {
     });
   } catch (err) {
     console.error("Error creating movie:", err);
+    
+    // Handle duplicate key error
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "ID phim đã tồn tại, vui lòng chọn slug khác",
+      });
+    }
+    
     res.status(400).json({
       message: err.message || "Lỗi khi tạo phim",
       error: err.errors
@@ -216,22 +228,24 @@ exports.updateMovie = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!id || typeof id !== 'string' || id.trim() === '') {
       return res.status(400).json({ message: "ID không hợp lệ" });
     }
 
-    // Check if movie exists
-    const existingMovie = await Movie.findById(id);
+    const existingMovie = await Movie.findById(id.trim());
     if (!existingMovie) {
       return res.status(404).json({ message: "Không tìm thấy phim" });
     }
 
-    // Validate title if provided
     if (req.body.title && !req.body.title.trim()) {
       return res.status(400).json({ message: "Tên phim không được để trống" });
     }
 
     const updateData = { ...req.body };
+    
+    // Không cho phép cập nhật _id
+    delete updateData._id;
+    
     if (updateData.title) {
       updateData.title = updateData.title.trim();
     }
@@ -246,10 +260,8 @@ exports.updateMovie = async (req, res) => {
 
       for (let genre of updateData.genres) {
         if (typeof genre === "string") {
-          // Find or create genre by name
           let genreDoc = await Genre.findOne({ name: genre });
           if (!genreDoc) {
-            // Create new genre if it doesn't exist
             genreDoc = new Genre({ name: genre });
             await genreDoc.save();
           }
@@ -261,7 +273,7 @@ exports.updateMovie = async (req, res) => {
       updateData.genres = processedGenres;
     }
 
-    const updated = await Movie.findByIdAndUpdate(id, updateData, {
+    const updated = await Movie.findByIdAndUpdate(id.trim(), updateData, {
       new: true,
       runValidators: true,
     }).populate("genres");
@@ -289,16 +301,16 @@ exports.deleteMovie = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!id || typeof id !== 'string' || id.trim() === '') {
       return res.status(400).json({ message: "ID không hợp lệ" });
     }
 
-    const movie = await Movie.findById(id);
+    const movie = await Movie.findById(id.trim());
     if (!movie) {
       return res.status(404).json({ message: "Không tìm thấy phim" });
     }
 
-    await Movie.findByIdAndDelete(id);
+    await Movie.findByIdAndDelete(id.trim());
 
     await logAdminAction(req.user.userId, `Xóa phim: ${movie.title}`);
 
@@ -377,5 +389,35 @@ exports.getTopViewByType = async (req, res) => {
     res.json(movies);
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+// Utility function để tăng view count
+exports.incrementViewCount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
+
+    const movie = await Movie.findByIdAndUpdate(
+      id.trim(),
+      { $inc: { viewCount: 1 } },
+      { new: true }
+    );
+
+    if (!movie) {
+      return res.status(404).json({ message: "Không tìm thấy phim" });
+    }
+
+    res.json({
+      success: true,
+      viewCount: movie.viewCount,
+      message: "Đã tăng lượt xem"
+    });
+  } catch (err) {
+    console.error("Error incrementing view count:", err);
+    res.status(500).json({ message: "Lỗi khi tăng lượt xem" });
   }
 };

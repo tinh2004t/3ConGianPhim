@@ -28,10 +28,10 @@ const userSchema = new mongoose.Schema({
     minlength: [60, 'Hash mật khẩu không hợp lệ'] // bcrypt hash có độ dài 60 ký tự
   },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Movie' }],
+  favorites: [{ type: String, ref: 'Movie' }],
   history: [
   {
-    movie: { type: mongoose.Schema.Types.ObjectId, ref: 'Movie' },
+    movie: { type: String, ref: 'Movie' },
     episode: { type: mongoose.Schema.Types.ObjectId, ref: 'Episode' }, // thêm trường này
     updatedAt: { type: Date, default: Date.now }
   }

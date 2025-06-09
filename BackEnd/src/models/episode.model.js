@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const episodeSchema = new mongoose.Schema({
   movie: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String, // Changed from ObjectId to String for slug support
     ref: 'Movie',
     required: true
   },
@@ -47,6 +47,7 @@ const episodeSchema = new mongoose.Schema({
 });
 
 // Index để đảm bảo không trùng episodeNumber trong cùng 1 movie
+// Index vẫn hoạt động bình thường với String slug
 episodeSchema.index({ movie: 1, episodeNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Episode', episodeSchema);
