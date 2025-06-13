@@ -117,7 +117,8 @@ const MoviePlayer = () => {
   const [selectedServer, setSelectedServer] = useState('Server #1');
   const [loading, setLoading] = useState(true);
   const [viewCounted, setViewCounted] = useState(new Set());
-  
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
   // States cho notification system
   const [notification, setNotification] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', data: null });
@@ -134,25 +135,69 @@ const MoviePlayer = () => {
     setNotification(null);
   };
 
+  // Hàm load comments riêng biệt
+  const loadComments = async (targetMovieId, targetEpisodeId) => {
+    setCommentsLoading(true);
+    try {
+      console.log('Loading comments with params:', {
+        movieId: targetMovieId,
+        episodeId: targetEpisodeId,
+        userLoggedIn: !!localStorage.getItem('token')
+      });
+      
+      const commentRes = await commentApi.getComments({
+        movieId: targetMovieId,
+        episodeId: targetEpisodeId,
+      });
+      
+      console.log('Comments response:', commentRes.data);
+      console.log('Comments array:', commentRes.data.comments);
+      
+      const commentsArray = Array.isArray(commentRes.data.comments) ? commentRes.data.comments : [];
+      setComments(commentsArray);
+      
+      console.log('Comments loaded successfully:', commentsArray.length, 'comments');
+    } catch (commentError) {
+      console.error('Error loading comments:', commentError);
+      console.error('Comment error response:', commentError.response?.data);
+      
+      // Hiển thị thông báo lỗi cụ thể
+      const errorMessage = commentError.response?.data?.message || 'Không thể tải bình luận';
+      showNotification('warning', 'Lỗi tải bình luận', errorMessage);
+      
+      // Vẫn đặt comments rỗng nhưng không ném lỗi
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
   // Load danh sách tập và dữ liệu cơ bản
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        
+
         // Load episodes và movie title
         const [epRes, movieRes] = await Promise.all([
           episodeApi.getEpisodesByMovieId(movieId),
           movieApi.getById(movieId)
         ]);
-        
+
         const fetchedEpisodes = epRes.data;
         setEpisodes(fetchedEpisodes);
         setMovieTitle(movieRes.data.title);
 
         // Load user info
         const storedUser = localStorage.getItem('user');
-        if (storedUser) setUser(JSON.parse(storedUser));
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (e) {
+            console.error('Error parsing user data:', e);
+            localStorage.removeItem('user');
+          }
+        }
 
       } catch (err) {
         console.error('Lỗi khi tải dữ liệu ban đầu:', err);
@@ -165,14 +210,14 @@ const MoviePlayer = () => {
     fetchInitialData();
   }, [movieId]);
 
-  // Load episode cụ thể và comments khi episodeId thay đổi
+  // Load episode cụ thể khi episodeId thay đổi
   useEffect(() => {
     const loadEpisodeAndComments = async () => {
       if (!episodes.length) return;
 
       try {
         let targetEpisodeId = episodeId;
-        
+
         // Nếu không có episodeId trong URL, chọn tập đầu tiên
         if (!episodeId && episodes.length > 0) {
           targetEpisodeId = episodes[0]._id;
@@ -180,26 +225,27 @@ const MoviePlayer = () => {
           return;
         }
 
-        // Load episode được chọn - SỬ DỤNG API KHÔNG TĂNG VIEW
+        // Load episode được chọn
         if (targetEpisodeId) {
           const episodeRes = await episodeApi.getEpisodeById(targetEpisodeId);
           setSelectedEpisode(episodeRes.data);
 
-          // Add to history
+          // Add to history nếu user đã đăng nhập
           const token = localStorage.getItem('token');
           if (token) {
-            await userApi.addHistory({
-              movieId,
-              episodeId: targetEpisodeId,
-            }, token);
+            try {
+              await userApi.addHistory({
+                movieId,
+                episodeId: targetEpisodeId,
+              }, token);
+            } catch (historyError) {
+              console.error('Error adding to history:', historyError);
+              // Không hiển thị lỗi cho user vì đây không phải là chức năng quan trọng
+            }
           }
 
           // Load comments cho episode này
-          const commentRes = await commentApi.getComments({
-            movieId,
-            episodeId: targetEpisodeId,
-          });
-          setComments(Array.isArray(commentRes.data.comments) ? commentRes.data.comments : []);
+          await loadComments(movieId, targetEpisodeId);
         }
 
       } catch (err) {
@@ -222,16 +268,16 @@ const MoviePlayer = () => {
         });
         return;
       }
-      
+
       try {
         // Đánh dấu ngay lập tức để tránh gọi API nhiều lần
         setViewCounted(prev => new Set([...prev, selectedEpisode._id]));
-        
+
         console.log(`🎬 Calling watchEpisode API for episode: ${selectedEpisode.episodeNumber}`);
-        
+
         // Gọi API watchEpisode để tăng lượt xem
         const response = await episodeApi.watchEpisode(movieId, selectedEpisode._id);
-        
+
         console.log(`✅ Successfully increased view count:`, response.data);
       } catch (error) {
         console.error('❌ Lỗi khi tăng lượt xem:', error);
@@ -246,7 +292,7 @@ const MoviePlayer = () => {
 
     // Delay một chút để đảm bảo user thực sự bắt đầu xem
     const timer = setTimeout(incrementViewCount, 2000);
-    
+
     return () => clearTimeout(timer);
   }, [selectedEpisode, movieId, viewCounted]);
 
@@ -254,7 +300,7 @@ const MoviePlayer = () => {
   const handleSelectEpisode = async (episode) => {
     // Reset server về server đầu tiên khi chuyển tập
     setSelectedServer('Server #1');
-    
+
     // Navigate đến URL mới - useEffect sẽ tự động load episode mới
     navigate(`/watch/${movieId}/episodes/${episode._id}`);
     showNotification('info', 'Chuyển tập', `Đang chuyển sang tập ${episode.episodeNumber}`);
@@ -263,7 +309,7 @@ const MoviePlayer = () => {
   // Tập tiếp theo
   const handleNextEpisode = () => {
     if (!selectedEpisode || !episodes.length) return;
-    
+
     const currentIndex = episodes.findIndex(ep => ep._id === selectedEpisode._id);
     if (currentIndex !== -1 && currentIndex < episodes.length - 1) {
       const nextEp = episodes[currentIndex + 1];
@@ -294,14 +340,23 @@ const MoviePlayer = () => {
     setIsSubmittingComment(true);
 
     try {
+      console.log('Creating comment with data:', {
+        movieId: movieId,
+        episodeId: episodeId,
+        content: commentText
+      });
+      
       const data = {
-        movieId,
+        movieId: movieId,
         episodeId: episodeId || null,
         content: commentText,
       };
 
       const res = await commentApi.createComment(data, token);
-      setComments([res.data, ...comments]);
+      console.log('Comment created successfully:', res.data);
+      
+      // Thêm comment mới vào đầu danh sách
+      setComments(prevComments => [res.data, ...prevComments]);
       setCommentText('');
       showNotification('success', 'Gửi thành công', 'Bình luận của bạn đã được đăng tải.');
     } catch (err) {
@@ -324,7 +379,7 @@ const MoviePlayer = () => {
   const confirmDeleteComment = async () => {
     const commentId = confirmModal.data;
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       showNotification('error', 'Lỗi xác thực', 'Bạn không có quyền thực hiện thao tác này.');
       return;
@@ -332,7 +387,7 @@ const MoviePlayer = () => {
 
     try {
       await commentApi.deleteComment(commentId, token);
-      setComments(comments.filter((c) => c._id !== commentId));
+      setComments(prevComments => prevComments.filter((c) => c._id !== commentId));
       showNotification('success', 'Xóa thành công', 'Bình luận đã được xóa.');
     } catch (err) {
       console.error('Xóa thất bại:', err);
@@ -463,11 +518,10 @@ const MoviePlayer = () => {
             <button
               onClick={handleAddToFavorites}
               disabled={isAddingFavorite}
-              className={`px-4 py-2 rounded transition flex items-center gap-2 ${
-                isAddingFavorite 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-red-600 hover:bg-red-700'
-              }`}
+              className={`px-4 py-2 rounded transition flex items-center gap-2 ${isAddingFavorite
+                ? 'bg-gray-600 cursor-not-allowed'
+                : 'bg-red-600 hover:bg-red-700'
+                }`}
             >
               {isAddingFavorite ? (
                 <>
@@ -489,15 +543,13 @@ const MoviePlayer = () => {
           <div className="w-full">
             <h3 className="text-xl font-semibold mb-2">Danh sách tập</h3>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-12 gap-3">
-
               {episodes.map(ep => (
                 <button
                   key={ep._id}
                   onClick={() => handleSelectEpisode(ep)}
-                  className={`px-4 py-2 rounded-xl border transition-colors ${
-                    selectedEpisode._id === ep._id
-                      ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-gray-800 text-gray-300 border-gray-600'
+                  className={`px-4 py-2 rounded-xl border transition-colors ${selectedEpisode._id === ep._id
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-gray-800 text-gray-300 border-gray-600'
                     } hover:bg-red-500 hover:border-red-500`}
                 >
                   {ep.episodeNumber}
@@ -524,11 +576,10 @@ const MoviePlayer = () => {
               <button
                 type="submit"
                 disabled={isSubmittingComment || !commentText.trim()}
-                className={`mt-2 px-4 py-2 rounded transition flex items-center gap-2 ${
-                  isSubmittingComment || !commentText.trim()
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
+                className={`mt-2 px-4 py-2 rounded transition flex items-center gap-2 ${isSubmittingComment || !commentText.trim()
+                  ? 'bg-gray-600 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-700'
+                  }`}
               >
                 {isSubmittingComment ? (
                   <>
@@ -551,53 +602,61 @@ const MoviePlayer = () => {
             </div>
           )}
 
-          <div className="space-y-4">
-            {comments.length === 0 && (
-              <div className="text-gray-400">Chưa có bình luận nào.</div>
-            )}
-            {comments.map((comment) => (
-              <div
-                key={comment._id}
-                className="p-3 bg-gray-800 rounded-xl relative group"
-              >
-                {/* Username */}
-                <p className="text-sm font-semibold">
-                  {comment.userId?.username || 'Ẩn danh'}
-                </p>
-                <p>{comment.content}</p>
+          {/* Loading state cho comments */}
+          {commentsLoading ? (
+            <div className="text-center py-4 text-gray-400">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-white mb-2"></div>
+              <p>Đang tải bình luận...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {comments.length === 0 && (
+                <div className="text-gray-400">Chưa có bình luận nào.</div>
+              )}
+              {comments.map((comment) => (
+                <div
+                  key={comment._id}
+                  className="p-3 bg-gray-800 rounded-xl relative group"
+                >
+                  {/* Username */}
+                  <p className="text-sm font-semibold">
+                    {comment.userId?.username || 'Ẩn danh'}
+                  </p>
+                  <p>{comment.content}</p>
 
-                {/* Ba chấm + menu xóa */}
-                {user && user._id === comment.user?._id && (
-                  <div className="absolute top-2 right-2">
-                    <div className="relative inline-block text-left">
-                      <button
-                        onClick={() =>
-                          setOpenMenuId(openMenuId === comment._id ? null : comment._id)
-                        }
-                        className="text-gray-400 hover:text-red-400 focus:outline-none"
-                      >
-                        ⋮
-                      </button>
+                  {/* Ba chấm + menu xóa */}
+                  {user && user._id === comment.userId?._id && (
+                    <div className="absolute top-2 right-2">
+                      <div className="relative inline-block text-left">
+                        <button
+                          onClick={() =>
+                            setOpenMenuId(openMenuId === comment._id ? null : comment._id)
+                          }
+                          className="text-gray-400 hover:text-red-400 focus:outline-none"
+                        >
+                          ⋮
+                        </button>
 
-                      {openMenuId === comment._id && (
-                        <div className="absolute right-0 mt-2 w-24 bg-white rounded-md shadow-lg z-50">
-                          <button
-                            onClick={() => {
-                              handleDeleteComment(comment._id);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-100 text-left"
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      )}
+                        {openMenuId === comment._id && (
+                          <div className="absolute right-0 mt-2 w-24 bg-white rounded-md shadow-lg z-50">
+                            <button
+                              onClick={() => {
+                                handleDeleteComment(comment._id);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-100 text-left"
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -611,15 +670,15 @@ const MoviePlayer = () => {
         onCancel={() => setConfirmModal({ isOpen: false, type: '', data: null })}
         title={
           confirmModal.type === 'login' ? 'Yêu cầu đăng nhập' :
-          confirmModal.type === 'deleteComment' ? 'Xác nhận xóa' : 'Xác nhận'
+            confirmModal.type === 'deleteComment' ? 'Xác nhận xóa' : 'Xác nhận'
         }
         message={
           confirmModal.type === 'login' ? 'Bạn cần đăng nhập để thực hiện chức năng này.' :
-          confirmModal.type === 'deleteComment' ? 'Bạn chắc chắn muốn xóa bình luận này?' : 'Bạn có chắc chắn?'
+            confirmModal.type === 'deleteComment' ? 'Bạn chắc chắn muốn xóa bình luận này?' : 'Bạn có chắc chắn?'
         }
         confirmText={
           confirmModal.type === 'login' ? 'Đăng nhập' :
-          confirmModal.type === 'deleteComment' ? 'Xóa' : 'Xác nhận'
+            confirmModal.type === 'deleteComment' ? 'Xóa' : 'Xác nhận'
         }
       />
 
