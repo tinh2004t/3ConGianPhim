@@ -4,22 +4,21 @@ const mongoose = require('mongoose');
 function createSlug(text) {
   return text
     .toLowerCase()
-    .normalize('NFD') // Xử lý ký tự có dấu tiếng Việt
-    .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
-    .replace(/[đĐ]/g, 'd') // Chuyển đ thành d
-    .replace(/[^a-z0-9\s-]/g, '') // Loại bỏ ký tự đặc biệt
-    .replace(/\s+/g, '-') // Thay thế khoảng trắng bằng dấu gạch ngang
-    .replace(/-+/g, '-') // Loại bỏ dấu gạch ngang liên tiếp
-    .trim('-'); // Loại bỏ dấu gạch ngang ở đầu và cuối
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim('-');
 }
 
 const episodeSchema = new mongoose.Schema({
   _id: {
     type: String,
-    required: true
   },
   movie: {
-    type: String, // Movie slug reference
+    type: String,
     ref: 'Movie',
     required: true
   },
@@ -61,18 +60,14 @@ const episodeSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
-  _id: false // Disable auto _id generation since we're using custom string _id
+  _id: false
 });
 
-// Pre-save middleware to generate slug-based _id
-episodeSchema.pre('save', async function(next) {
-  // Only generate _id if it's a new document and no _id is set
-  if (this.isNew && !this._id) {
+// Pre-validate middleware to generate _id before validation
+episodeSchema.pre('validate', async function(next) {
+  if (!this._id) {
     try {
-      // Generate base slug from movie and episode number
       const baseSlug = `${this.movie}-tap-${this.episodeNumber}`;
-      
-      // Check for duplicates and add counter if needed
       let finalSlug = baseSlug;
       let counter = 1;
       
@@ -92,8 +87,7 @@ episodeSchema.pre('save', async function(next) {
 // Compound index để đảm bảo không trùng episodeNumber trong cùng 1 movie
 episodeSchema.index({ movie: 1, episodeNumber: 1 }, { unique: true });
 
-// Index cho việc tìm kiếm nhanh
-episodeSchema.index({ movie: 1, episodeNumber: 1 });
+// Index cho tìm kiếm nhanh
 episodeSchema.index({ type: 1 });
 episodeSchema.index({ createdAt: -1 });
 
@@ -113,7 +107,6 @@ episodeSchema.methods.updateSlug = async function() {
   const newSlug = this.constructor.generateEpisodeSlug(this.movie, this.episodeNumber, this.title);
   
   if (newSlug !== this._id) {
-    // Check if new slug exists
     let finalSlug = newSlug;
     let counter = 1;
     

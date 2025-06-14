@@ -1,2 +1,3 @@
 /BackEnd/logs
 *.log
+BackEnd/logs/info.log

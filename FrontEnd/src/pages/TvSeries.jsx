@@ -92,10 +92,8 @@ const Movies = () => {
           }
         }
 
-        console.log('Sending params:', params);
         const res = await movieApi.getAll(params);
         const result = res.data || res;
-        console.log('API result:', result);
 
         // Extract movie list from response
         let movieList = [];

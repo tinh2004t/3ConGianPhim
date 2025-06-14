@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const Movie = require('../models/movie.model');
+const Episode = require('../models/episode.model');
 const logAdminAction = require('../utils/logAdminAction');
 
 // Lấy thông tin người dùng
@@ -28,33 +29,65 @@ exports.addFavorite = async (req, res) => {
   }
 };
 
-// Lấy danh sách yêu thích
+// Lấy danh sách yêu thích - FIXED: Không dùng populate với String
 exports.getFavorites = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).populate('favorites');
-    res.json(user.favorites);
+    const user = await User.findById(req.user.userId);
+    
+    // Lấy thông tin chi tiết của các phim yêu thích
+    const favoriteMovies = await Movie.find({
+      _id: { $in: user.favorites }
+    });
+    
+    res.json(favoriteMovies);
   } catch (err) {
+    console.error('Lỗi getFavorites:', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
 
-// Ghi lịch sử xem
+// Ghi lịch sử xem - FIXED: Xử lý dữ liệu cũ
 exports.addHistory = async (req, res) => {
   try {
     const { movieId, episodeId } = req.body;
 
-    const user = await User.findById(req.user.userId);
+    if (!movieId || !episodeId || typeof movieId !== 'string' || typeof episodeId !== 'string') {
+      return res.status(400).json({ message: 'movieId và episodeId phải là chuỗi hợp lệ' });
+    }
 
-    // Kiểm tra nếu đã có lịch sử cho phim này thì cập nhật tập mới
+    const movie = await Movie.findById(movieId);
+    const episode = await Episode.findById(episodeId);
+    if (!movie || !episode) {
+      return res.status(404).json({ message: 'Phim hoặc tập không tồn tại' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    }
+
+    // Làm sạch dữ liệu history cũ (loại bỏ các entry không hợp lệ)
+    user.history = user.history.filter(item => 
+      item && 
+      item.movie && 
+      item.episode && 
+      typeof item.movie === 'string' && 
+      typeof item.episode === 'string'
+    );
+
     const existing = user.history.find(
-      (item) => item.movie === movieId // Bỏ toString() vì movieId giờ là String
+      (item) => item.movie === movieId
     );
 
     if (existing) {
       existing.episode = episodeId;
       existing.updatedAt = new Date();
     } else {
-      user.history.push({ movie: movieId, episode: episodeId });
+      user.history.push({ 
+        movie: movieId, 
+        episode: episodeId, 
+        updatedAt: new Date() 
+      });
     }
 
     await user.save();
@@ -75,7 +108,7 @@ exports.removeFavorite = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
     user.favorites = user.favorites.filter(
-      (favId) => favId !== movieId // Bỏ toString() vì favId giờ là String
+      (favId) => favId !== movieId
     );
     await user.save();
     res.json({ message: 'Đã xóa khỏi yêu thích' });
@@ -85,15 +118,47 @@ exports.removeFavorite = async (req, res) => {
   }
 };
 
-// Lấy lịch sử xem
+// Lấy lịch sử xem - FIXED: Không dùng populate với String
 exports.getHistory = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId)
-      .populate('history.movie')
-      .populate('history.episode');
+    const user = await User.findById(req.user.userId);
+    
+    // Làm sạch dữ liệu history cũ
+    const validHistory = user.history.filter(item => 
+      item && 
+      item.movie && 
+      item.episode && 
+      typeof item.movie === 'string' && 
+      typeof item.episode === 'string'
+    );
 
-    res.json(user.history);
+    // Lấy thông tin chi tiết của movies và episodes
+    const historyWithDetails = await Promise.all(
+      validHistory.map(async (item) => {
+        try {
+          const movie = await Movie.findById(item.movie);
+          const episode = await Episode.findById(item.episode);
+          
+          return {
+            movie: movie,
+            episode: episode,
+            updatedAt: item.updatedAt
+          };
+        } catch (error) {
+          console.error('Lỗi khi lấy chi tiết history:', error);
+          return null;
+        }
+      })
+    );
+
+    // Lọc bỏ các item null (không tìm thấy movie hoặc episode)
+    const filteredHistory = historyWithDetails.filter(item => 
+      item && item.movie && item.episode
+    );
+
+    res.json(filteredHistory);
   } catch (err) {
+    console.error('Lỗi getHistory:', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
@@ -118,12 +183,12 @@ exports.updateUser = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
     }).select('-passwordHash');
-    await logAdminAction(req.user.userId, `Sửa thông tin người dùng ${updatedUser.username}`);
-
+    
     if (!updatedUser) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
+    await logAdminAction(req.user.userId, `Sửa thông tin người dùng ${updatedUser.username}`);
     res.json(updatedUser);
   } catch (err) {
     console.error('Lỗi updateUser:', err);

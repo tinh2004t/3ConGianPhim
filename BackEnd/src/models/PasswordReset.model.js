@@ -1,4 +1,3 @@
-// models/PasswordReset.js hoặc models/passwordReset.model.js
 const mongoose = require('mongoose');
 
 const passwordResetSchema = new mongoose.Schema({
@@ -17,17 +16,21 @@ const passwordResetSchema = new mongoose.Schema({
     required: [true, 'Mã xác minh là bắt buộc'],
     length: 6
   },
+  type: { 
+    type: String, 
+    enum: ['forgot_password', 'change_password'], 
+    default: 'forgot_password' 
+  },
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: 600 // 10 phút (600 giây)
+    expires: 600 // TTL index được tạo tự động
   }
 }, {
   timestamps: true
 });
 
-// Index để tìm kiếm nhanh
-passwordResetSchema.index({ email: 1, code: 1 });
-passwordResetSchema.index({ createdAt: 1 }, { expireAfterSeconds: 600 });
+// Chỉ mục để tìm kiếm nhanh
+passwordResetSchema.index({ email: 1 });
 
 module.exports = mongoose.model('PasswordReset', passwordResetSchema);

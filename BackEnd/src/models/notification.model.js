@@ -12,7 +12,7 @@ const notificationSchema = new mongoose.Schema({
     required: false
   },
   episode: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'Episode',
     required: false
   },

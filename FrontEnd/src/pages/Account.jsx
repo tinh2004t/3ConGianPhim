@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import userApi from '../api/userApi';
+import authApi from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 
 const Account = () => {
@@ -9,6 +10,19 @@ const Account = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // State cho đổi mật khẩu
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    code: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -25,8 +39,6 @@ const Account = () => {
 
         // Lấy history
         const historyResponse = await userApi.getHistory(token);
-        console.log("History data:", historyResponse.data);
-
         setHistory(historyResponse.data);
 
       } catch (error) {
@@ -38,6 +50,25 @@ const Account = () => {
 
     fetchUserData();
   }, []);
+
+  // Countdown timer cho mã xác minh
+  useEffect(() => {
+    let timer;
+    if (timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1000) {
+            clearInterval(timer);
+            setIsCodeSent(false);
+            setPasswordError('Mã xác minh đã hết hạn');
+            return 0;
+          }
+          return prev - 1000;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [timeLeft]);
 
   const handleRemoveFavorite = async (movieId) => {
     try {
@@ -57,28 +88,72 @@ const Account = () => {
     }
   };
 
-
   const formatWatchDate = (dateString) => {
-  if (!dateString) return 'Chưa xem';
+    if (!dateString) return 'Chưa xem';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    if (diffDays > 0) return `${diffDays} ngày trước`;
+    else if (diffHours > 0) return `${diffHours} giờ trước`;
+    else if (diffMinutes > 0) return `${diffMinutes} phút trước`;
+    else return 'Vừa xem';
+  };
 
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now - date);
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-  const diffMinutes = Math.floor(diffTime / (1000 * 60));
+  // Xử lý gửi yêu cầu mã xác minh
+  const handleRequestCode = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    setIsLoading(true);
 
-  if (diffDays > 0) {
-    return `${diffDays} ngày trước`;
-  } else if (diffHours > 0) {
-    return `${diffHours} giờ trước`;
-  } else if (diffMinutes > 0) {
-    return `${diffMinutes} phút trước`;
-  } else {
-    return 'Vừa xem';
-  }
-};
+    try {
+      const response = await authApi.requestChangePassword({ currentPassword: passwordForm.currentPassword });
+      setIsCodeSent(true);
+      setTimeLeft(600000); // 10 phút
+      setPasswordSuccess(response.message);
+    } catch (error) {
+      setPasswordError(error.response?.data?.message || 'Lỗi khi gửi mã xác minh');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Xử lý đổi mật khẩu
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    setIsLoading(true);
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Mật khẩu xác nhận không khớp');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await authApi.confirmChangePassword({
+        code: passwordForm.code,
+        newPassword: passwordForm.newPassword,
+        confirmPassword: passwordForm.confirmPassword
+      });
+      setPasswordSuccess(response.message);
+      setIsCodeSent(false);
+      setTimeLeft(0);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '', code: '' });
+    } catch (error) {
+      setPasswordError(error.response?.data?.message || 'Lỗi khi đổi mật khẩu');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
+  };
 
   if (loading) {
     return (
@@ -132,7 +207,6 @@ const Account = () => {
                 </p>
               </div>
             </div>
-
             <div className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-xl p-6 text-center text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
@@ -177,7 +251,6 @@ const Account = () => {
                 {history.length} items
               </span>
             </div>
-
             {history && history.length > 0 ? (
               <div className="space-y-4">
                 {history.map((item, index) => (
@@ -186,7 +259,6 @@ const Account = () => {
                     className="bg-gray-700 rounded-lg border border-gray-600 hover:border-red-500 transition-all hover:bg-gray-600 overflow-hidden group"
                   >
                     <div className="flex items-center p-4">
-                      {/* Movie Poster */}
                       <div className="flex-shrink-0 mr-4">
                         <img
                           src={item.movie?.posterUrl || '/default-movie-poster.png'}
@@ -194,8 +266,6 @@ const Account = () => {
                           className="w-16 h-20 object-cover rounded-md border border-gray-500"
                         />
                       </div>
-
-                      {/* Movie Info */}
                       <div className="flex-grow">
                         <div className="flex items-start justify-between">
                           <div>
@@ -219,8 +289,6 @@ const Account = () => {
                               )}
                             </div>
                           </div>
-                          
-                          {/* Action Buttons */}
                           <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
                               className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition-colors"
@@ -242,8 +310,6 @@ const Account = () => {
                             </button>
                           </div>
                         </div>
-
-                        {/* Progress Bar (if available) */}
                         {item.progress && (
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
@@ -295,7 +361,6 @@ const Account = () => {
                 {favorites.length} movies
               </span>
             </div>
-
             {favorites.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                 {favorites.map((movie) => (
@@ -366,6 +431,114 @@ const Account = () => {
           </div>
         );
 
+      case 'security':
+        return (
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl border border-gray-700 p-6">
+            <div className="flex items-center mb-6">
+              <svg className="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0-1.1-.9-2-2-2s-2 .9-2 2v3c0 1.1.9 2 2 2s2-.9 2-2v-3zm0 0c0 1.1.9 2 2 2s2-.9 2-2v-3c0-1.1-.9-2-2-2s-2 .9-2 2v3zm-4 5h8m-8-2h8" />
+              </svg>
+              <h3 className="text-2xl font-bold text-white">Security Settings</h3>
+            </div>
+            <div className="max-w-md mx-auto">
+              {passwordError && (
+                <div className="bg-red-600 bg-opacity-20 border border-red-500 text-red-200 p-4 rounded-lg mb-4">
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div className="bg-green-600 bg-opacity-20 border border-green-500 text-green-200 p-4 rounded-lg mb-4">
+                  {passwordSuccess}
+                </div>
+              )}
+              {!isCodeSent ? (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-4">Change Password</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-1">Current Password</label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={passwordForm.currentPassword}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                        placeholder="Enter current password"
+                      />
+                    </div>
+                    <button
+                      onClick={handleRequestCode}
+                      disabled={isLoading || !passwordForm.currentPassword}
+                      className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                        isLoading || !passwordForm.currentPassword
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
+                    >
+                      {isLoading ? 'Sending...' : 'Send Verification Code'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-4">Verify and Change Password</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-1">Verification Code</label>
+                      <input
+                        type="text"
+                        name="code"
+                        value={passwordForm.code}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                        placeholder="Enter 6-digit code"
+                      />
+                      {timeLeft > 0 && (
+                        <p className="text-gray-400 text-sm mt-1">
+                          Code expires in {Math.floor(timeLeft / 60000)}:{((timeLeft % 60000) / 1000).toString().padStart(2, '0')}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-1">New Password</label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordForm.newPassword}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                        placeholder="Enter new password"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-1">Confirm New Password</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordForm.confirmPassword}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                        placeholder="Confirm new password"
+                      />
+                    </div>
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={isLoading || !passwordForm.code || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                      className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                        isLoading || !passwordForm.code || !passwordForm.newPassword || !passwordForm.confirmPassword
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
+                    >
+                      {isLoading ? 'Changing...' : 'Change Password'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -378,22 +551,22 @@ const Account = () => {
           <h1 className="text-4xl font-bold text-white mb-3">My Account</h1>
           <p className="text-gray-400 text-lg">Manage your profile and movie preferences</p>
         </div>
-
-        {/* Tab Navigation */}
         <div className="flex justify-center mb-8">
           <div className="bg-gray-800 rounded-xl p-1 border border-gray-700">
-            <div className="flex space-x-1">
+            <div className="flex flex-wrap space-x-1">
               {[
                 { key: 'profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
                 { key: 'history', label: 'History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-                { key: 'favorites', label: 'Favorites', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' }
+                { key: 'favorites', label: 'Favorites', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
+                { key: 'security', label: 'Security', icon: 'M12 11c0-1.1-.9-2-2-2s-2 .9-2 2v3c0 1.1.9 2 2 2s2-.9 2-2v-3zm0 0c0 1.1.9 2 2 2s2-.9 2-2v-3c0-1.1-.9-2-2-2s-2 .9-2 2v3zm-4 5h8m-8-2h8' }
               ].map((tab) => (
                 <button
                   key={tab.key}
-                  className={`flex items-center space-x-2 py-3 px-6 font-medium rounded-lg transition-all duration-200 ${activeTab === tab.key
+                  className={`flex items-center space-x-2 py-3 px-6 font-medium rounded-lg transition-all duration-200 ${
+                    activeTab === tab.key
                       ? 'bg-red-600 text-white shadow-lg transform scale-105'
                       : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                    }`}
+                  }`}
                   onClick={() => setActiveTab(tab.key)}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -405,8 +578,6 @@ const Account = () => {
             </div>
           </div>
         </div>
-
-        {/* Tab Content */}
         <div className="animate-fadeIn">
           {renderTabContent()}
         </div>

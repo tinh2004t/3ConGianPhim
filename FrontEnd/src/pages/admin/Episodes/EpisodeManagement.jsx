@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit3, Trash2, X, Play, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Plus, Edit3, Trash2, X, Play, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import episodeApi from '../../../api/episodeApi';
 import movieApi from '../../../api/movieApi';
 
@@ -16,6 +16,11 @@ const EpisodeManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingEpisode, setEditingEpisode] = useState(null);
+  
+  // State cho modal xác nhận xóa
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingEpisode, setDeletingEpisode] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [episodeForm, setEpisodeForm] = useState({
     title: '',
@@ -40,8 +45,16 @@ const EpisodeManagement = () => {
       setLoading(true);
       setError('');
       const response = await episodeApi.getEpisodesByMovieId(movieId);
-      // Xử lý response data phù hợp với API
-      setEpisodes(response.data || []);
+      const episodesData = response.data || [];
+      
+      // Debug: kiểm tra cấu trúc dữ liệu
+      console.log('Loaded episodes:', episodesData);
+      if (episodesData.length > 0) {
+        console.log('First episode structure:', episodesData[0]);
+        console.log('First episode _id:', episodesData[0]._id);
+      }
+      
+      setEpisodes(episodesData);
     } catch (error) {
       console.error('Error loading episodes:', error);
       setError('Không thể tải danh sách tập phim');
@@ -59,65 +72,74 @@ const EpisodeManagement = () => {
   }, [movieId]);
 
   const handleEpisodeSubmit = async () => {
-  try {
-    setSubmitLoading(true);
-    setError('');
+    try {
+      setSubmitLoading(true);
+      setError('');
 
-    // Validate form
-    if (!episodeForm.title.trim() || !episodeForm.episodeNumber) {
-      setError('Vui lòng điền đầy đủ thông tin tập phim');
-      return;
+      // Validate form
+      if (!episodeForm.title.trim() || !episodeForm.episodeNumber) {
+        setError('Vui lòng điền đầy đủ thông tin tập phim');
+        return;
+      }
+
+      // Validate video sources
+      const validSources = episodeForm.videoSources.filter(source => 
+        source.name.trim() && source.url.trim()
+      );
+
+      if (validSources.length === 0) {
+        setError('Vui lòng thêm ít nhất một video source hợp lệ');
+        return;
+      }
+
+      const episodeData = {
+        title: episodeForm.title.trim(),
+        episodeNumber: parseInt(episodeForm.episodeNumber),
+        videoSources: validSources.map(source => ({
+          type: source.type || 'iframe',
+          name: source.name.trim(),
+          url: source.url.trim()
+        }))
+      };
+
+      const token = localStorage.getItem('token');
+
+      if (showEditForm && editingEpisode && editingEpisode._id) {
+        // Update episode - đảm bảo có _id
+        console.log('Updating episode with _id:', editingEpisode._id); // Debug log
+        await episodeApi.updateEpisode(editingEpisode._id, episodeData, token);
+      } else {
+        // Create new episode
+        await episodeApi.createEpisode(movieId, episodeData, token);
+      }
+
+      // Reload episodes
+      await loadEpisodes();
+
+      // Close form and reset
+      setShowAddForm(false);
+      setShowEditForm(false);
+      setEditingEpisode(null);
+      resetEpisodeForm();
+
+    } catch (error) {
+      console.error('Error saving episode:', error);
+      console.error('Episode data:', editingEpisode); // Debug log
+      setError(error.response?.data?.message || 'Có lỗi xảy ra khi lưu tập phim');
+    } finally {
+      setSubmitLoading(false);
     }
-
-    // Validate video sources
-    const validSources = episodeForm.videoSources.filter(source => 
-      source.name.trim() && source.url.trim()
-    );
-
-    if (validSources.length === 0) {
-      setError('Vui lòng thêm ít nhất một video source hợp lệ');
-      return;
-    }
-
-    const episodeData = {
-      title: episodeForm.title.trim(),
-      episodeNumber: parseInt(episodeForm.episodeNumber),
-      videoSources: validSources.map(source => ({
-        type: source.type || 'iframe',
-        name: source.name.trim(),
-        url: source.url.trim()
-      }))
-    };
-
-    const token = localStorage.getItem('token'); // 👈 Lấy token từ localStorage (hoặc context/store nếu bạn dùng)
-
-    if (showEditForm && editingEpisode) {
-      // Update episode
-      await episodeApi.updateEpisode(editingEpisode._id, episodeData, token);
-    } else {
-      // Create new episode
-      await episodeApi.createEpisode(movieId, episodeData, token);
-    }
-
-    // Reload episodes
-    await loadEpisodes();
-
-    // Close form and reset
-    setShowAddForm(false);
-    setShowEditForm(false);
-    setEditingEpisode(null);
-    resetEpisodeForm();
-
-  } catch (error) {
-    console.error('Error saving episode:', error);
-    setError(error.response?.data?.message || 'Có lỗi xảy ra khi lưu tập phim');
-  } finally {
-    setSubmitLoading(false);
-  }
-};
-
+  };
 
   const handleEdit = (episode) => {
+    console.log('Editing episode:', episode); // Debug log
+    
+    if (!episode._id) {
+      console.error('Episode missing _id:', episode);
+      setError('Không tìm thấy ID tập phim');
+      return;
+    }
+
     setEditingEpisode(episode);
     setEpisodeForm({
       title: episode.title || '',
@@ -133,26 +155,52 @@ const EpisodeManagement = () => {
     setShowEditForm(true);
   };
 
-  const handleDelete = async (episodeId) => {
-  if (!window.confirm('Bạn có chắc chắn muốn xóa tập phim này?')) {
-    return;
-  }
+  // Hiển thị modal xác nhận xóa
+  const showDeleteConfirmation = (episode) => {
+    if (!episode._id) {
+      console.error('Episode ID is missing');
+      setError('Không tìm thấy ID tập phim');
+      return;
+    }
+    
+    setDeletingEpisode(episode);
+    setShowDeleteConfirm(true);
+  };
 
-  try {
-    setLoading(true);
-    const token = localStorage.getItem('token'); // 👈 Lấy token
-    await episodeApi.deleteEpisode(episodeId, token); // 👈 Gửi token
+  // Xử lý xóa tập phim
+  const handleDeleteConfirm = async () => {
+    if (!deletingEpisode || !deletingEpisode._id) {
+      setError('Không tìm thấy thông tin tập phim cần xóa');
+      return;
+    }
 
-    // Remove from local state
-    setEpisodes(episodes.filter(episode => episode._id !== episodeId));
-  } catch (error) {
-    console.error('Error deleting episode:', error);
-    setError(error.response?.data?.message || 'Có lỗi xảy ra khi xóa tập phim');
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setDeleteLoading(true);
+      console.log('Deleting episode with _id:', deletingEpisode._id); // Debug log
+      const token = localStorage.getItem('token');
+      await episodeApi.deleteEpisode(deletingEpisode._id, token);
 
+      // Remove from local state
+      setEpisodes(episodes.filter(episode => episode._id !== deletingEpisode._id));
+      
+      // Đóng modal
+      setShowDeleteConfirm(false);
+      setDeletingEpisode(null);
+      
+    } catch (error) {
+      console.error('Error deleting episode:', error);
+      console.error('Episode ID was:', deletingEpisode._id); // Debug log
+      setError(error.response?.data?.message || 'Có lỗi xảy ra khi xóa tập phim');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Hủy xóa
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setDeletingEpisode(null);
+  };
 
   const addVideoSource = () => {
     setEpisodeForm({
@@ -358,7 +406,7 @@ const EpisodeManagement = () => {
                         <span>Sửa</span>
                       </button>
                       <button
-                        onClick={() => handleDelete(episode._id)}
+                        onClick={() => showDeleteConfirmation(episode)}
                         className="bg-red-600 hover:bg-red-700 px-3 py-2 rounded-lg text-white text-sm transition-colors flex items-center space-x-1"
                         title="Xóa tập phim"
                       >
@@ -370,6 +418,68 @@ const EpisodeManagement = () => {
                 </div>
               ))
           )}
+        </div>
+      )}
+
+      {/* Modal Xác Nhận Xóa */}
+      {showDeleteConfirm && deletingEpisode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  Xác nhận xóa tập phim
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  Hành động này không thể hoàn tác
+                </p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-300 mb-2">
+                Bạn có chắc chắn muốn xóa tập phim sau không?
+              </p>
+              <div className="bg-gray-700 rounded-lg p-3 border-l-4 border-red-500">
+                <p className="text-white font-medium">
+                  Tập {deletingEpisode.episodeNumber}: {deletingEpisode.title}
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  {deletingEpisode.videoSources?.length || 0} video source(s)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleDeleteCancel}
+                disabled={deleteLoading}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteLoading}
+                className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Xóa
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

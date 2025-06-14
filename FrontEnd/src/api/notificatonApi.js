@@ -5,8 +5,6 @@ const notificationApi = {
   // ✅ Lấy danh sách thông báo của user hiện tại
   getNotifications: async (token) => {
     try {
-      console.log('=== API: Getting notifications ===');
-      console.log('Token:', token ? 'Present' : 'Missing');
 
       const response = await axiosClient.get('/notifications', {
         headers: {
@@ -14,10 +12,8 @@ const notificationApi = {
         },
       });
 
-      console.log('✅ API Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ API Error in getNotifications:', error);
       throw error?.response?.data || error;
     }
   },
@@ -45,7 +41,6 @@ const notificationApi = {
       console.log('✅ Mark as read successful:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ API Error in markAsRead:', error);
 
       if (error.response) {
         console.error('Response status:', error.response.status);
@@ -78,10 +73,8 @@ const notificationApi = {
         },
       });
 
-      console.log('✅ API Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ API Error in deleteNotification:', error);
       throw error?.response?.data || error;
     }
   },

@@ -18,6 +18,8 @@ const MovieManagement = () => {
   const [error, setError] = useState('');
   const [genres, setGenres] = useState([]);
   const [genresLoading, setGenresLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [movieToDelete, setMovieToDelete] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -241,10 +243,14 @@ const MovieManagement = () => {
   };
 
   const handleDelete = async (movie) => {
-    const movieId = movie.id || movie._id;
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa phim "${movie.title}"?`)) {
-      return;
-    }
+    setMovieToDelete(movie);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!movieToDelete) return;
+
+    const movieId = movieToDelete.id || movieToDelete._id;
 
     try {
       setLoading(true);
@@ -255,6 +261,10 @@ const MovieManagement = () => {
       // Reload movies to get fresh data
       await loadMovies();
 
+      // Close modal
+      setShowDeleteConfirm(false);
+      setMovieToDelete(null);
+
     } catch (error) {
       console.error('Error deleting movie:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi xóa phim';
@@ -262,6 +272,10 @@ const MovieManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setMovieToDelete(null);
   };
   const getGenreName = (genreId) => {
     const genre = genres.find(g => (g._id || g.name) === genreId);
@@ -788,6 +802,69 @@ const MovieManagement = () => {
                   Hủy
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && movieToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center mb-4">
+              <div className="bg-red-100 rounded-full p-2 mr-3">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">Xác nhận xóa phim</h3>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-300 mb-2">
+                Bạn có chắc chắn muốn xóa phim này không?
+              </p>
+              <div className="bg-gray-700 rounded-lg p-3 border-l-4 border-red-500">
+                <p className="text-white font-medium">{movieToDelete.title}</p>
+                <p className="text-gray-400 text-sm">
+                  Năm: {movieToDelete.releaseYear} •
+                  {movieToDelete.genres && movieToDelete.genres.length > 0 && (
+                    <span className="ml-1">
+                      {movieToDelete.genres.slice(0, 2).map(genre =>
+                        typeof genre === 'object' ? genre.name : genre
+                      ).join(', ')}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <p className="text-red-400 text-sm mt-2">
+                ⚠️ Hành động này không thể hoàn tác!
+              </p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={confirmDelete}
+                disabled={loading}
+                className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Xóa phim
+                  </>
+                )}
+              </button>
+              <button
+                onClick={cancelDelete}
+                disabled={loading}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
             </div>
           </div>
         </div>

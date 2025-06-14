@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import genreApi from '../../../api/genreApi';
 import AdminLayout from '../../../components/layout/admin/AdminLayout';
-import { Plus, Edit3, Trash2, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 
 const Genres = () => {
   const [genres, setGenres] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingGenre, setEditingGenre] = useState(null);
+  const [deletingGenre, setDeletingGenre] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({ name: '', description: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const token = localStorage.getItem('token');
 
@@ -61,16 +64,31 @@ const Genres = () => {
     setShowEditForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa thể loại này?')) {
-      try {
-        await genreApi.delete(id, token);
-        const updated = await genreApi.getAll();
-        setGenres(updated.data?.data || []); // ✅ Đảm bảo là mảng
-      } catch (error) {
-        console.error('Failed to delete genre:', error);
-      }
+  const handleDeleteClick = (genre) => {
+    setDeletingGenre(genre);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingGenre) return;
+    
+    setIsDeleting(true);
+    try {
+      await genreApi.delete(deletingGenre._id, token);
+      const updated = await genreApi.getAll();
+      setGenres(updated.data?.data || []); // ✅ Đảm bảo là mảng
+      closeDeleteModal();
+    } catch (error) {
+      console.error('Failed to delete genre:', error);
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingGenre(null);
+    setIsDeleting(false);
   };
 
   const closeForm = () => {
@@ -123,7 +141,7 @@ const Genres = () => {
                   <Edit3 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(genre._id)}
+                  onClick={() => handleDeleteClick(genre)}
                   className="bg-red-600 hover:bg-red-700 p-2 rounded text-white transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -160,7 +178,7 @@ const Genres = () => {
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(genre._id)}
+                        onClick={() => handleDeleteClick(genre)}
                         className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white text-sm transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -200,7 +218,7 @@ const Genres = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       {(showAddForm || showEditForm) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-4 sm:p-6 w-full max-w-md mx-4">
@@ -245,6 +263,74 @@ const Genres = () => {
                   Hủy
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 border border-gray-700">
+            {/* Header với icon cảnh báo */}
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+            
+            {/* Tiêu đề */}
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-bold text-white mb-2">
+                Xác nhận xóa thể loại
+              </h3>
+              <p className="text-gray-300 text-sm">
+                Bạn có chắc chắn muốn xóa thể loại này không? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            {/* Thông tin thể loại sẽ bị xóa */}
+            {deletingGenre && (
+              <div className="bg-gray-700 rounded-lg p-4 mb-6 border-l-4 border-red-500">
+                <div className="flex items-start">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-white text-sm mb-1">
+                      {deletingGenre.name}
+                    </h4>
+                    <p className="text-gray-300 text-xs line-clamp-2">
+                      {deletingGenre.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+              <button
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="w-full sm:flex-1 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Đang xóa...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Xóa thể loại</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
