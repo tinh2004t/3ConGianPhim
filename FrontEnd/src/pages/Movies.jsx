@@ -339,7 +339,7 @@ const Movies = () => {
               <MovieCard
                 key={movie._id || movie.id}
                 id={movie._id || movie.id}
-                title={movie.title}
+                title={movie.title} 
                 posterUrl={movie.posterUrl}
                 releaseYear={movie.releaseYear}
                 viewCount={movie.viewCount}
