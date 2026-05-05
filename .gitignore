@@ -1,4 +1,17 @@
-/BackEnd/logs
+# Thư viện
+node_modules/
+
+# Biến môi trường (Tuyệt đối bảo mật)
+.env
+.env.*
+
+# Logs
 *.log
-*node_modules
-BackEnd/logs/info.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# File tạm của hệ điều hành
+.DS_Store
+Thumbs.db
