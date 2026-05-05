@@ -1,3 +1,4 @@
 /BackEnd/logs
 *.log
+*node_modules
 BackEnd/logs/info.log
